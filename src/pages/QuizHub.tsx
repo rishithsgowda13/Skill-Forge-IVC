@@ -33,37 +33,41 @@ const QuizHub: React.FC = () => {
         <Header />
 
         <main className="flex-1 flex flex-col items-center justify-center px-8">
-          {/* Background logo watermark */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.04]">
-            <img src={ivcLogo} alt="" className="w-[600px] h-[600px] object-contain" />
+          {/* Background logo watermark - Larger */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.06]">
+            <img src={ivcLogo} alt="" className="w-[800px] h-[800px] object-contain mix-blend-lighten" />
           </div>
 
-          <div className="relative z-10 flex flex-col items-center">
-            <h1 className="font-display text-5xl md:text-6xl font-black tracking-[0.2em] glow-text text-center mb-16 uppercase">
+          <div className="relative z-10 flex flex-col items-center w-full max-w-4xl">
+            <h1 className="font-display text-5xl md:text-7xl font-black tracking-[0.25em] glow-text text-center mb-20 uppercase leading-snug">
               INNOVATORS & VISIONARIES CLUB
             </h1>
 
-            <div className="glass-card p-12 w-full max-w-lg border border-cyan-glow/10">
-              <div className="flex flex-col items-center gap-8">
+            {/* Enlarged Card */}
+            <div className="glass-card p-16 w-full border-2 border-cyan-glow/20 rounded-3xl"
+                 style={{ backdropFilter: 'blur(30px)', background: 'rgba(12, 18, 32, 0.85)' }}>
+              <div className="flex flex-col items-center gap-12">
                 <div className="text-center">
-                  <p className="font-display text-[10px] tracking-[0.6em] text-cyan-glow/50 font-bold uppercase mb-1">ACCESS CODE:</p>
+                  <p className="font-display text-xl tracking-[0.6em] text-cyan-glow font-black uppercase mb-4">ACCESS_CODE:REQUIRED</p>
                 </div>
 
-                <form onSubmit={handleStartQuiz} className="w-full flex flex-col items-center gap-8">
+                <form onSubmit={handleStartQuiz} className="w-full flex flex-col items-center gap-12">
                   <input
                     type="text"
                     autoFocus
-                    placeholder="ENTER CODE"
+                    placeholder="ENTER_ENCRYPTION_KEY"
                     value={accessCode}
                     onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-                    className="w-full bg-transparent border-b-2 border-cyan-glow/15 text-center py-4 text-2xl font-display font-black text-cyan-glow tracking-[0.4em] focus:border-cyan-glow/60 outline-none transition-colors placeholder:text-white/10"
+                    className="w-full bg-transparent border-b-4 border-cyan-glow/20 text-center py-6 text-5xl font-display font-black text-cyan-glow tracking-[0.5em] focus:border-cyan-glow/60 focus:bg-white/[0.02] outline-none transition-all placeholder:text-white/10"
                   />
+                  
+                  {/* Huge Button */}
                   <button
                     type="submit"
                     disabled={isValidating}
-                    className="w-full py-4 bg-cyan-glow text-black font-display text-xs tracking-[0.6em] font-bold uppercase rounded-sm hover:shadow-[0_0_40px_rgba(0,247,255,0.3)] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+                    className="w-full py-8 bg-cyan-glow text-black font-display text-2xl tracking-[0.8em] font-black uppercase rounded-2xl hover:shadow-[0_0_80px_rgba(0,247,255,0.4)] hover:scale-105 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
                   >
-                    {isValidating ? 'VALIDATING...' : 'START QUIZ'}
+                    {isValidating ? 'VALIDATING_LINK...' : 'START_MISSION'}
                   </button>
                 </form>
 
@@ -73,14 +77,19 @@ const QuizHub: React.FC = () => {
                       initial={{ opacity: 0, y: -5 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      className="text-red-400 font-display text-[10px] tracking-widest font-bold uppercase"
+                      className="text-red-500 font-display text-xl tracking-[0.3em] font-black uppercase"
                     >
-                      ▸ {error}
+                      ▸ CRITICAL_ERR: {error}
                     </motion.p>
                   )}
                 </AnimatePresence>
               </div>
             </div>
+            
+            {/* Helper hints - Enlarged */}
+            <p className="mt-12 text-sm tracking-[0.5em] text-white/20 uppercase font-bold text-center">
+              SYSTEM_ENCRYPTION_V4 • AUTHORIZED_PERSONNEL_ONLY
+            </p>
           </div>
         </main>
       </div>
