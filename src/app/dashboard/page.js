@@ -236,7 +236,7 @@ export default function DashboardPage() {
       <Sidebar />
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col p-10 md:p-14 ml-[240px] lg:ml-[280px]">
+      <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col p-10 md:p-14 ml-0 lg:ml-[280px]">
         <header className="flex justify-between items-start mb-12 w-full">
           <div className="space-y-1">
             <h2 className="text-5xl font-black text-[#0F172A] tracking-tighter uppercase leading-none">
@@ -247,13 +247,15 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <button 
-            onClick={() => router.push('/quiz')}
-            className="bg-[#2563EB] text-white px-10 py-6 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-4 shadow-[0_15px_40px_rgba(37,99,235,0.3)] hover:bg-[#1E40AF] transition-all active:scale-[0.98] group"
-          >
-            <Zap size={20} className="group-hover:translate-x-1.5 transition-transform" />
-            <span>Initialize Session</span>
-          </button>
+          {(role === "admin" || role === "evaluator") && (
+            <button 
+              onClick={() => router.push('/quiz')}
+              className="bg-[#2563EB] text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-4 shadow-[0_15px_40px_rgba(37,99,235,0.3)] hover:bg-[#1E40AF] transition-all active:scale-[0.98] group"
+            >
+              <Zap size={20} className="group-hover:translate-x-1.5 transition-transform" />
+              <span>Initialize Session</span>
+            </button>
+          )}
         </header>
 
         <section className="space-y-12">
