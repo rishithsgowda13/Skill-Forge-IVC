@@ -36,7 +36,13 @@
 
   html {
     background-color: var(--color-page-bg);
-    font-size: 13px; /* Achieves the 0.8 zoom effect safely across all browsers/devices */
+    font-size: 13px; /* Web default for high-fidelity feel */
+  }
+
+  @media (max-width: 640px) {
+    html {
+      font-size: 8px; /* Scales down the entire UI by ~40% for mobile precision */
+    }
   }
 
   body {
