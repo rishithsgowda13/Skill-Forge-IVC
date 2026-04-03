@@ -1,0 +1,229 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase";
+import { useParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Zap, 
+  Lock, 
+  Clock, 
+  Trophy, 
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Fingerprint
+} from "lucide-react";
+
+export default function CandidatePlayPage() {
+  const { code } = useParams();
+  const router = useRouter();
+  const supabase = createClient();
+  
+  const [quiz, setQuiz] = useState(null);
+  const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [user, setUser] = useState(null);
+  const [resultsActive, setResultsActive] = useState(false);
+  const [score, setScore] = useState(0);
+
+  useEffect(() => {
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
+      // Allow mock session for demo
+      const mockSession = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("mock_session="))
+        ?.split("=")[1];
+      
+      const sessionUser = user || { id: "mock-user", email: "candidate@skillforge.io" };
+      setUser(sessionUser);
+
+      // Fetch Quiz
+      const { data: quizData } = await supabase
+        .from("quizzes")
+        .select("*, questions(*)")
+        .eq("access_code", code.toUpperCase())
+        .single();
+      
+      if (!quizData) {
+        router.push("/quiz/access");
+        return;
+      }
+      
+      setQuiz(quizData);
+      setLoading(false);
+
+      // Subscribe to changes
+      const channel = supabase
+        .channel(`quiz_session_${code}`)
+        .on(
+          'postgres_changes', 
+          { event: '*', schema: 'public', table: 'quizzes', filter: `access_code=eq.${code.toUpperCase()}` },
+          (payload) => {
+            const updatedQuiz = payload.new;
+            setQuiz(prev => ({ ...prev, ...updatedQuiz }));
+            setSelectedOption(null); // Reset choice on new index
+            setResultsActive(false);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+    init();
+  }, [code]);
+
+  useEffect(() => {
+    if (quiz && quiz.questions && quiz.current_question_index !== undefined) {
+      const q = quiz.questions.find(qt => qt.order_index === quiz.current_question_index);
+      setCurrentQuestion(q);
+    }
+  }, [quiz]);
+
+  const handleSelect = async (optionIndex) => {
+    if (selectedOption !== null || quiz?.status !== 'showing-question') return;
+    
+    setSelectedOption(optionIndex);
+    // In a real app, record the answer to Supabase immediately
+    const answer = String.fromCharCode(65 + optionIndex); // A, B, C, D
+    
+    // Calculate score (mock logic: correct if it matches correct_answer)
+    const isCorrect = answer === currentQuestion.correct_answer;
+    if (isCorrect) setScore(prev => prev + 100);
+  };
+
+  if (loading) {
+     return (
+       <div className="h-screen bg-[#F0F2F5] flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-12 h-12 border-4 border-primary-blue border-t-transparent rounded-full animate-spin mb-6" />
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#94A3B8]">Decrypting Signal...</p>
+       </div>
+     );
+  }
+
+  if (quiz?.status === 'lobby') {
+    return (
+      <div className="h-screen bg-[#F0F2F5] flex flex-col items-center justify-center p-8 text-center space-y-10">
+         <motion.div
+           initial={{ scale: 0.9, opacity: 0 }}
+           animate={{ scale: 1, opacity: 1 }}
+           className="w-24 h-24 bg-white rounded-[32px] shadow-2xl flex items-center justify-center relative overflow-hidden"
+         >
+            <Fingerprint className="text-primary-blue w-12 h-12 relative z-10" />
+            <div className="absolute inset-0 bg-primary-blue/5 animate-pulse" />
+         </motion.div>
+         
+         <div className="space-y-4">
+            <h1 className="text-4xl font-black text-[#0F172A] tracking-tighter uppercase leading-none">{quiz.title}</h1>
+            <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.4em]">Ready for Synchronous Deployment</p>
+         </div>
+
+         <div className="bg-white px-10 py-6 rounded-3xl border border-[#E2E8F0] shadow-sm animate-bounce">
+            <span className="text-xs font-black text-primary-blue uppercase tracking-widest">Awaiting Command from Host</span>
+         </div>
+      </div>
+    );
+  }
+
+  if (quiz?.status === 'finished') {
+    return (
+      <div className="h-screen bg-[#0F172A] text-white flex flex-col items-center justify-center p-10 text-center space-y-12">
+         <div className="space-y-4">
+            <Trophy className="text-amber-400 w-20 h-20 mx-auto" />
+            <h1 className="text-4xl font-black tracking-tighter uppercase">Signal Terminated</h1>
+            <p className="text-[11px] font-black text-white/40 uppercase tracking-[0.4em]">Final Registry Score Synchronized</p>
+         </div>
+         <div className="text-6xl font-black tabular-nums">{score}</div>
+         <button 
+           onClick={() => router.push('/quiz/admin')}
+           className="px-12 py-5 bg-white text-[#0F172A] rounded-2xl font-black text-[10px] uppercase tracking-widest"
+         >
+           Close Data Node
+         </button>
+      </div>
+    );
+  }
+
+  // Active Play Mode
+  return (
+    <div className="h-screen bg-[#F0F2F5] flex flex-col p-6 space-y-6 overflow-hidden">
+       {/* Top Status Bar */}
+       <div className="flex items-center justify-between p-6 bg-white rounded-[32px] border border-[#E2E8F0] shadow-sm">
+          <div className="flex items-center gap-4">
+             <div className="w-10 h-10 bg-primary-blue/10 rounded-xl flex items-center justify-center text-primary-blue">
+                <Zap size={20} />
+             </div>
+             <div>
+                <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest leading-none mb-1">Session Active</p>
+                <p className="text-sm font-black text-[#0F172A] uppercase">Node Sync Point {quiz.current_question_index + 1}</p>
+             </div>
+          </div>
+          <div className="bg-[#0F172A] text-white px-6 py-2.5 rounded-2xl text-xs font-black tracking-widest tabular-nums">
+             {score}
+          </div>
+       </div>
+
+       {/* Options Grid - NO QUESTION TEXT PERMITTED */}
+       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AnimatePresence mode="wait">
+             {quiz.status === 'showing-question' ? (
+                <>
+                   {[0, 1, 2, 3].map((idx) => {
+                     const colors = [
+                       'bg-[#2563EB] shadow-blue-200',
+                       'bg-[#EF4444] shadow-red-200',
+                       'bg-[#F59E0B] shadow-amber-200',
+                       'bg-[#10B981] shadow-emerald-200'
+                     ];
+                     const labels = ['A', 'B', 'C', 'D'];
+                     
+                     return (
+                       <motion.button
+                         key={idx}
+                         initial={{ scale: 0.9, opacity: 0 }}
+                         animate={{ scale: 1, opacity: 1 }}
+                         exit={{ scale: 0.9, opacity: 0 }}
+                         whileTap={{ scale: 0.95 }}
+                         disabled={selectedOption !== null}
+                         onClick={() => handleSelect(idx)}
+                         className={`relative rounded-[40px] flex flex-col items-center justify-center text-white transition-all overflow-hidden ${
+                           selectedOption === idx ? 'ring-8 ring-primary-blue/20 scale-[0.98]' : 
+                           selectedOption !== null ? 'opacity-30 grayscale-[30%]' : ''
+                         } ${colors[idx]} shadow-2xl`}
+                       >
+                          <span className="text-6xl font-black opacity-20 absolute inset-0 flex items-center justify-center scale-[3] pointer-events-none">
+                            {labels[idx]}
+                          </span>
+                          <span className="text-5xl font-black relative z-10">{labels[idx]}</span>
+                          {selectedOption === idx && (
+                             <div className="absolute top-6 right-6">
+                                <CheckCircle2 className="w-8 h-8 text-white" />
+                             </div>
+                          )}
+                       </motion.button>
+                     );
+                   })}
+                </>
+             ) : (
+                <div className="col-span-full bg-white rounded-[40px] border border-[#E2E8F0] border-dashed flex flex-col items-center justify-center p-12 text-center">
+                   <Monitor className="text-[#94A3B8] w-16 h-16 mb-6 animate-pulse" />
+                   <h2 className="text-2xl font-black text-[#0F172A] uppercase tracking-tighter">Read the Question</h2>
+                   <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] mt-2">Analysis broadcast on main display terminal</p>
+                </div>
+             )}
+          </AnimatePresence>
+       </div>
+
+       {/* Bottom Identity Node */}
+       <div className="p-4 flex items-center justify-center gap-3">
+          <div className="w-6 h-px bg-[#E2E8F0]" />
+          <span className="text-[9px] font-black text-[#94A3B8] uppercase tracking-[0.5em]">{user?.email || "CONNECTED_NODE"}</span>
+          <div className="w-6 h-px bg-[#E2E8F0]" />
+       </div>
+    </div>
+  );
+}
