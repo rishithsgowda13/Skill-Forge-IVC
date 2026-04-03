@@ -15,7 +15,8 @@ import {
   Lock,
   ChevronRight,
   Monitor,
-  Play
+  Play,
+  Settings
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -24,7 +25,9 @@ export default function AdminQuizzesPage() {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newQuiz, setNewQuiz] = useState({ title: "", description: "" });
+  const [newQuiz, setNewQuiz] = useState({ title: "", description: "", access_code: "" });
+  const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const [generatedCode, setGeneratedCode] = useState(null);
   
   const supabase = createClient();
@@ -78,7 +81,9 @@ export default function AdminQuizzesPage() {
 
   const handleCreateQuiz = async (e) => {
     e.preventDefault();
-    const code = generateAccessCode();
+    setSubmitting(true);
+    setError(null);
+    const code = newQuiz.access_code.toUpperCase();
     
     const { data, error } = await supabase
       .from("quizzes")
@@ -95,10 +100,14 @@ export default function AdminQuizzesPage() {
 
     if (error) {
       console.error(error);
+      setError(error.message);
+      setSubmitting(false);
       return;
     }
 
     setGeneratedCode(code);
+    setNewQuiz({ title: "", description: "", access_code: "" });
+    setSubmitting(false);
     loadQuizzes();
   };
 
@@ -106,7 +115,7 @@ export default function AdminQuizzesPage() {
     <div className="min-h-screen bg-[#F0F2F5] flex font-sans text-black">
       <Sidebar />
 
-      <main className="flex-1 ml-[280px] p-10 space-y-10">
+      <main className="flex-1 ml-[240px] p-10 space-y-10">
         <div className="flex items-center justify-between">
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="text-4xl font-black text-[#0F172A] tracking-tighter uppercase leading-none">
@@ -160,20 +169,28 @@ export default function AdminQuizzesPage() {
                  </div>
                </div>
 
-               <div className="flex items-center justify-between pt-6 border-t border-[#F1F5F9]">
-                  <div className="flex items-center gap-4">
-                     <div className="flex flex-col">
-                        <span className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest leading-none mb-1">Status</span>
-                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{q.status || "WAITING"}</span>
-                     </div>
-                  </div>
-                  <button 
-                    onClick={() => router.push(`/quiz/host/${q.access_code}`)}
-                    className="w-10 h-10 bg-[#0F172A] text-white rounded-xl flex items-center justify-center hover:bg-primary-blue transition-colors shadow-lg"
-                  >
-                    <Play size={18} fill="currentColor" />
-                  </button>
-               </div>
+                <div className="flex items-center justify-between pt-6 border-t border-[#F1F5F9]">
+                   <div className="flex items-center gap-4">
+                      <div className="flex flex-col">
+                         <span className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest leading-none mb-1">Status</span>
+                         <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{q.status || "WAITING"}</span>
+                      </div>
+                   </div>
+                   <div className="flex items-center gap-3">
+                      <button 
+                        onClick={() => router.push(`/quiz/admin/quizzes/${q.id}`)}
+                        className="w-10 h-10 bg-[#F1F5F9] text-[#94A3B8] rounded-xl flex items-center justify-center hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-all"
+                      >
+                        <Settings size={18} />
+                      </button>
+                      <button 
+                        onClick={() => router.push(`/quiz/host/${q.access_code}`)}
+                        className="w-10 h-10 bg-[#0F172A] text-white rounded-xl flex items-center justify-center hover:bg-primary-blue transition-colors shadow-lg"
+                      >
+                        <Play size={18} fill="currentColor" />
+                      </button>
+                   </div>
+                </div>
              </motion.div>
            ))}
         </div>
@@ -223,9 +240,44 @@ export default function AdminQuizzesPage() {
                           />
                        </div>
 
-                       <button className="w-full bg-primary-blue text-white py-6 rounded-[28px] font-black text-xs tracking-[0.4em] uppercase shadow-2xl hover:bg-blue-700 transition-all">
-                          Generate Protocol Code
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest ml-6">Protocol Access Key</label>
+                          <input 
+                            required
+                            value={newQuiz.access_code}
+                            onChange={(e) => setNewQuiz({...newQuiz, access_code: e.target.value})}
+                            placeholder="EX: ALPHA-9"
+                            className="w-full bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-[28px] py-5 px-8 text-sm font-bold focus:outline-none focus:border-primary-blue transition-all"
+                          />
+                       </div>
+
+                       <button 
+                         disabled={submitting}
+                         className="w-full bg-primary-blue text-white py-6 rounded-[28px] font-black text-xs tracking-[0.4em] uppercase shadow-2xl hover:bg-blue-700 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-4"
+                       >
+                          {submitting ? (
+                            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                          ) : (
+                            <>
+                              <span>Finalize Protocol creation</span>
+                              <Zap size={18} fill="currentColor" />
+                            </>
+                          )}
                        </button>
+
+                       <AnimatePresence>
+                         {error && (
+                            <motion.div 
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="bg-rose-50 border border-rose-100 rounded-3xl p-6 flex items-center gap-4"
+                            >
+                               <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                               <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">{error}</p>
+                            </motion.div>
+                         )}
+                       </AnimatePresence>
                     </form>
                   </>
                 ) : (
