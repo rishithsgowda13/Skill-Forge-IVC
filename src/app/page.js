@@ -393,39 +393,104 @@ export default function LoginPage() {
             <BrandingPanel />
           </motion.div>
 
-          {/* ─── Form Panel (takes remaining space) ─── */}
-          <motion.div 
-            layout
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className={`flex-1 bg-white flex items-center justify-center py-8 px-6 overflow-y-auto ${isSignUp ? "md:mr-0 md:ml-0" : "md:ml-0"}`}
-            style={{ marginLeft: isSignUp ? "0" : "40%", marginRight: isSignUp ? "40%" : "0" }}
-          >
-            <AnimatePresence mode="wait">
-              {isSignUp ? (
-                <motion.div
-                  key="signup"
-                  initial={{ opacity: 0, x: -30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 30 }}
-                  transition={{ duration: 0.3 }}
-                  className="w-full flex justify-center"
-                >
-                  <SignUpForm />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="login"
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -30 }}
-                  transition={{ duration: 0.3 }}
-                  className="w-full flex justify-center"
-                >
-                  <LoginForm />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+          {/* White Panel - Form */}
+          <div className="flex-1 p-12 md:p-20 bg-white flex flex-col justify-center overflow-y-auto">
+            <div className="max-w-[420px] mx-auto w-full">
+              <div className="text-center mb-12">
+                 <p className="text-[18px] md:text-[20px] font-black text-[#2563EB] uppercase tracking-[0.45em] mb-4 whitespace-nowrap">INNOVATORS AND VISIONARIES CLUB</p>
+                 <h1 className="text-4xl md:text-5xl font-black text-[#0F172A] tracking-tighter mb-4 leading-none whitespace-nowrap">System Authentication</h1>
+                 <p className="text-xs font-black text-[#94A3B8] uppercase tracking-[0.4em]">Enter Authorized Credentials</p>
+              </div>
+
+              {/* Role Switcher */}
+              <div className="bg-[#f1f5f9] p-1 rounded-[24px] border border-[#e2e8f0] flex relative mb-10 h-12">
+                 <motion.div
+                    animate={{ x: userRole === "candidate" ? 0 : "100%" }}
+                    className="absolute left-1 top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-[20px] shadow-lg shadow-blue-900/5"
+                 />
+                 <button 
+                  onClick={() => setUserRole("candidate")}
+                  className={`flex-1 relative z-10 text-[10px] font-black uppercase tracking-widest ${userRole === "candidate" ? "text-primary-blue" : "text-[#64748b]"}`}
+                 >
+                   I'm a Candidate
+                 </button>
+                 <button 
+                  onClick={() => setUserRole("evaluator")}
+                  className={`flex-1 relative z-10 text-[10px] font-black uppercase tracking-widest ${userRole === "evaluator" ? "text-primary-blue" : "text-[#64748b]"}`}
+                 >
+                   I'm an Evaluator
+                 </button>
+              </div>
+
+              <form onSubmit={handleAuth} className="space-y-6">
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest ml-4">Identity Identifier</label>
+                    <div className="relative group">
+                       <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94A3B8] group-focus-within:text-primary-blue transition-colors" />
+                       <input 
+                         required
+                         type="text"
+                         value={email}
+                         onChange={(e) => setEmail(e.target.value)}
+                         placeholder="Node Email or ID"
+                         className="w-full bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-[28px] py-5 pl-16 pr-8 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-primary-blue focus:ring-8 focus:ring-blue-100/50 transition-all placeholder:text-[#cbd5e1]"
+                       />
+                    </div>
+                 </div>
+
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest ml-4">Security Key</label>
+                    <div className="relative group">
+                       <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94A3B8] group-focus-within:text-primary-blue transition-colors" />
+                       <input 
+                         required
+                         type="password"
+                         value={password}
+                         onChange={(e) => setPassword(e.target.value)}
+                         placeholder="Protocol Key"
+                         className="w-full bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-[28px] py-5 pl-16 pr-20 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-primary-blue focus:ring-8 focus:ring-blue-100/50 transition-all placeholder:text-[#cbd5e1]"
+                       />
+                       <button type="button" className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary-blue uppercase tracking-widest hover:underline">Reset</button>
+                    </div>
+                 </div>
+
+                 <button
+                    disabled={loading}
+                    className="w-full bg-primary-blue text-white py-6 rounded-[28px] font-black text-xs tracking-[0.4em] uppercase shadow-[0_20px_40px_-10px_rgba(37,99,235,0.3)] hover:bg-blue-700 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-4 group"
+                 >
+                    {loading ? <Loader2 className="animate-spin w-5 h-5" /> : (
+                      <>
+                        <span>Execute Login</span>
+                        <ArrowRight size={20} className="group-hover:translate-x-1.5 transition-transform" />
+                      </>
+                    )}
+                 </button>
+
+                 {error && (
+                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center pt-2 leading-relaxed">{error}</p>
+                 )}
+
+                 <div className="relative py-8 flex items-center">
+                    <div className="flex-1 h-px bg-[#F1F5F9]" />
+                    <span className="px-6 text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.4em]">Secondary Authentication</span>
+                    <div className="flex-1 h-px bg-[#F1F5F9]" />
+                 </div>
+
+                 <button 
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  className="w-full bg-white border-2 border-[#E2E8F0] py-5 rounded-[28px] flex items-center justify-center gap-4 hover:bg-[#F8FAFC] transition-all group active:scale-[0.98]"
+                 >
+                   <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-5 h-5" alt="G" />
+                   <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#1E293B]">Continue with Google</span>
+                 </button>
+              </form>
+
+              <div className="mt-12 text-center">
+                 <p className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-widest">Don't have an account? <span className="text-primary-blue font-black cursor-pointer hover:underline">Initialize One</span></p>
+              </div>
+            </div>
+          </div>
         </div>
       </motion.div>
     </div>
