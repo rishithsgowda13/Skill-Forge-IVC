@@ -171,8 +171,8 @@ export default function LoginPage() {
           <div className="flex-1 p-12 md:p-20 bg-white flex flex-col justify-center overflow-y-auto">
             <div className="max-w-[420px] mx-auto w-full">
               <div className="text-center mb-12">
-                 <p className="text-[18px] font-black text-[#2563EB] uppercase tracking-[0.3em] mb-4">Innovators & Visionaries Club</p>
-                 <h1 className="text-4xl md:text-5xl font-black text-[#0F172A] tracking-tighter mb-4 leading-none">System Authentication</h1>
+                 <p className="text-[18px] md:text-[20px] font-black text-[#2563EB] uppercase tracking-[0.45em] mb-4 whitespace-nowrap">INNOVATORS AND VISIONARIES CLUB</p>
+                 <h1 className="text-4xl md:text-5xl font-black text-[#0F172A] tracking-tighter mb-4 leading-none whitespace-nowrap">System Authentication</h1>
                  <p className="text-xs font-black text-[#94A3B8] uppercase tracking-[0.4em]">Enter Authorized Credentials</p>
               </div>
 
