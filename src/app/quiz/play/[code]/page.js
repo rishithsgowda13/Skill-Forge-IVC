@@ -55,7 +55,7 @@ export default function CandidatePlayPage() {
       setQuiz(quizData);
       setLoading(false);
 
-      // Subscribe to changes
+      // Subscribe to changes and presence
       const channel = supabase
         .channel(`quiz_session_${code}`)
         .on(
@@ -68,7 +68,14 @@ export default function CandidatePlayPage() {
             setResultsActive(false);
           }
         )
-        .subscribe();
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await channel.track({
+              user_id: sessionUser.id,
+              online_at: new Date().toISOString(),
+            });
+          }
+        });
 
       return () => {
         supabase.removeChannel(channel);
@@ -122,9 +129,22 @@ export default function CandidatePlayPage() {
             <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.4em]">Ready for Synchronous Deployment</p>
          </div>
 
-         <div className="bg-white px-10 py-6 rounded-3xl border border-[#E2E8F0] shadow-sm animate-bounce">
-            <span className="text-xs font-black text-primary-blue uppercase tracking-widest">Awaiting Command from Host</span>
-         </div>
+         <AnimatePresence>
+            <motion.div 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[200] bg-white border border-[#E2E8F0] shadow-2xl rounded-[32px] px-10 py-6 flex items-center gap-6"
+            >
+               <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center relative">
+                  <div className="absolute inset-0 bg-blue-400/20 rounded-full animate-ping" />
+                  <Clock className="text-primary-blue w-6 h-6 relative z-10" />
+               </div>
+               <div className="text-left">
+                  <p className="text-[10px] font-black text-primary-blue uppercase tracking-[0.3em] leading-none mb-1.5">Waiting Room Protocol</p>
+                  <p className="text-sm font-black text-[#0F172A] uppercase tracking-tight">Waiting for admin to start the quiz</p>
+               </div>
+            </motion.div>
+         </AnimatePresence>
       </div>
     );
   }

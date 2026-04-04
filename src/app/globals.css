@@ -4,23 +4,23 @@
   --font-heading: "Outfit", "Inter", sans-serif;
   --font-sans: "Inter", system-ui, sans-serif;
 
-  /* Color Palette - Midnight Cyber */
+  /* Color Palette - Midnight White Refined */
   --color-page-bg: #F8FAFC;
-  --color-sidebar-bg: #0F172A;
+  --color-sidebar-bg: #FFFFFF;
   --color-card-bg: #FFFFFF;
-  --color-card-border: #E2E8F0;
+  --color-card-border: #F1F5F9;
   --color-primary-blue: #2563EB;
   --color-success-green: #10B981;
   --color-warning-amber: #F59E0B;
   --color-accent-indigo: #6366F1;
-  --color-deep-indigo: #1E1B4B;
+  --color-deep-indigo: #0F172A;
   --color-text-primary: #0F172A;
   --color-text-secondary: #64748B;
   --color-text-meta: #94A3B8;
-  --color-nav-hover: #1E293B;
+  --color-nav-hover: #F8FAFC;
 
   /* Radius */
-  --radius-card: 32px;
+  --radius-card: 20px;
   --radius-inner: 20px;
   --radius-pill: 12px;
 
@@ -39,6 +39,7 @@
     background-color: var(--color-page-bg);
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
+    font-size: 9px; /* Aggressively scaled for high-fidelity '70% zoom' feel at 100% */
   }
 
   body {

@@ -31,6 +31,7 @@ export default function ReportsPage() {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isMounted, setIsMounted] = useState(false);
+  const [showPasteWarning, setShowPasteWarning] = useState(false);
 
   const supabase = createClient();
   const router = useRouter();
@@ -108,6 +109,12 @@ export default function ReportsPage() {
     }, 1500);
   };
 
+  const handlePaste = (e) => {
+    e.preventDefault();
+    setShowPasteWarning(true);
+    setTimeout(() => setShowPasteWarning(false), 3000);
+  };
+
   const isAdmin = role === "admin";
 
   if (!isMounted) return null;
@@ -124,7 +131,7 @@ export default function ReportsPage() {
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 flex-1">
-               <div className="lg:col-span-4 bg-white rounded-[40px] border border-[#E2E8F0] shadow-sm flex flex-col overflow-hidden h-[calc(100vh-280px)]">
+               <div className="lg:col-span-4 bg-white rounded-[12px] border border-[#E2E8F0] shadow-sm flex flex-col overflow-hidden h-[calc(100vh-280px)]">
                   <div className="p-8 border-b border-[#F1F5F9] space-y-6">
                      <div className="flex items-center gap-3">
                         <Users size={18} className="text-[#2563EB]" />
@@ -175,7 +182,7 @@ export default function ReportsPage() {
                           exit={{ opacity: 0, y: -20 }}
                           className="space-y-10"
                         >
-                           <div className="bg-white rounded-[40px] border border-[#E2E8F0] shadow-sm p-10 space-y-10">
+                           <div className="bg-white rounded-[12px] border border-[#E2E8F0] shadow-sm p-10 space-y-10">
                               <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-8">
                                  <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 bg-[#F1F5F9] rounded-2xl flex items-center justify-center">
@@ -214,7 +221,7 @@ export default function ReportsPage() {
                               )}
                            </div>
 
-                           <div className="bg-white rounded-[40px] border border-[#E2E8F0] shadow-sm p-10">
+                           <div className="bg-white rounded-[12px] border border-[#E2E8F0] shadow-sm p-10">
                               <div className="flex items-center gap-4 mb-10 pb-8 border-b border-[#F1F5F9]">
                                  <div className="w-12 h-12 bg-[#F1F5F9] rounded-2xl flex items-center justify-center">
                                     <Cpu className="text-[#2563EB] w-6 h-6" />
@@ -227,7 +234,7 @@ export default function ReportsPage() {
 
                               <div className="space-y-4">
                                  {selectedCandidate.aiStats.history.length > 0 ? selectedCandidate.aiStats.history.map((trace, idx) => (
-                                   <div key={idx} className="flex items-center justify-between p-7 bg-[#F8FAFC] border border-[#E2E8F0] rounded-[24px] hover:shadow-md transition-all group">
+                                   <div key={idx} className="flex items-center justify-between p-7 bg-[#F8FAFC] border border-[#E2E8F0] rounded-[12px] hover:shadow-md transition-all group">
                                       <div className="flex items-center gap-6">
                                          <div className="w-10 h-10 rounded-xl bg-white border border-[#E2E8F0] flex items-center justify-center text-[10px] font-black text-[#94A3B8]">
                                             0{idx + 1}
@@ -251,7 +258,7 @@ export default function ReportsPage() {
                            </div>
                         </motion.div>
                      ) : (
-                        <div className="h-full bg-white/50 border-2 border-dashed border-[#E2E8F0] rounded-[40px] flex flex-col items-center justify-center space-y-6 text-center p-10">
+                        <div className="h-full bg-white/50 border-2 border-dashed border-[#E2E8F0] rounded-[12px] flex flex-col items-center justify-center space-y-6 text-center p-10">
                            <div className="w-20 h-20 bg-white rounded-[32px] flex items-center justify-center shadow-lg border border-[#F1F5F9]">
                               <Activity className="w-10 h-10 text-[#2563EB] opacity-40" />
                            </div>
@@ -272,7 +279,7 @@ export default function ReportsPage() {
               <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em]">Authorized Node Intelligence Submission</p>
             </header>
 
-            <div className="flex-1 bg-white rounded-[40px] border border-[#E2E8F0] shadow-sm p-8 md:p-12 flex flex-col relative overflow-hidden">
+            <div className="flex-1 bg-white rounded-[12px] border border-[#E2E8F0] shadow-sm p-8 md:p-12 flex flex-col relative overflow-hidden">
               <div className="flex items-center gap-4 mb-10 relative z-10">
                 <div className="w-12 h-12 bg-[#F1F5F9] rounded-2xl flex items-center justify-center border border-[#E2E8F0]">
                   <FileText className="text-[#2563EB] w-6 h-6" />
@@ -288,9 +295,10 @@ export default function ReportsPage() {
                   <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] ml-4">Overview</label>
                   <textarea
                     value={overview}
+                    onPaste={handlePaste}
                     onChange={(e) => setOverview(e.target.value)}
                     placeholder="Provide a brief overview of your findings..."
-                    className="w-full min-h-[120px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-[24px] p-6 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-[#94A3B8] resize-none"
+                    className="w-full min-h-[120px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-[12px] p-6 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-[#94A3B8] resize-none"
                   />
                 </div>
 
@@ -298,29 +306,32 @@ export default function ReportsPage() {
                   <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] ml-4">Applications in Real World</label>
                   <textarea
                     value={applications}
+                    onPaste={handlePaste}
                     onChange={(e) => setApplications(e.target.value)}
                     placeholder="How can this be applied in real-world scenarios..."
-                    className="w-full min-h-[100px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-[24px] p-6 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-[#94A3B8] resize-none"
+                    className="w-full min-h-[100px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-[12px] p-6 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-[#94A3B8] resize-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] ml-4">Analysis & Reflections</label>
+                    <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] ml-4">Your thoughts</label>
                     <textarea
                       value={thoughts}
+                      onPaste={handlePaste}
                       onChange={(e) => setThoughts(e.target.value)}
                       placeholder="Share your personal analysis..."
-                      className="w-full min-h-[100px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-[24px] p-6 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-[#94A3B8] resize-none"
+                      className="w-full min-h-[100px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-[12px] p-6 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-[#94A3B8] resize-none"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] ml-4">Improvements / Suggestions</label>
+                    <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] ml-4">Future improvements</label>
                     <textarea
                       value={improvements}
+                      onPaste={handlePaste}
                       onChange={(e) => setImprovements(e.target.value)}
                       placeholder="Suggest enhancements for the protocol..."
-                      className="w-full min-h-[100px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-[24px] p-6 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-[#94A3B8] resize-none"
+                      className="w-full min-h-[100px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-[12px] p-6 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-[#94A3B8] resize-none"
                     />
                   </div>
                 </div>
@@ -441,12 +452,31 @@ export default function ReportsPage() {
                     exit={{ opacity: 0, scale: 1.05 }}
                     className="absolute inset-0 bg-white/95 backdrop-blur-md z-50 flex flex-col items-center justify-center text-center p-10"
                   >
-                    <div className="w-24 h-24 bg-green-50 rounded-[40px] flex items-center justify-center mb-8 relative">
+                    <div className="w-24 h-24 bg-green-50 rounded-[12px] flex items-center justify-center mb-8 relative">
                        <div className="absolute inset-0 bg-green-200/30 rounded-full animate-ping" />
                        <Send className="text-green-500 w-10 h-10 relative z-10" />
                     </div>
                     <h3 className="text-2xl font-black text-[#0F172A] mb-2 uppercase tracking-tighter">Transmission Successful</h3>
                     <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.3em]">Data node has been archived in central registry</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {showPasteWarning && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 50 }}
+                    className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[200] bg-white border border-[#E2E8F0] shadow-2xl rounded-full px-10 py-5 flex items-center gap-6"
+                  >
+                     <div className="w-10 h-10 bg-amber-50 rounded-2xl flex items-center justify-center">
+                        <AlertCircle className="text-amber-500 w-5 h-5" />
+                     </div>
+                     <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#0F172A]">Security Protocol</span>
+                        <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-tighter">Paste option is disabled for this</span>
+                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>

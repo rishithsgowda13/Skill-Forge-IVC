@@ -25,6 +25,7 @@ export default function Sidebar() {
   const router = useRouter();
   const supabase = createClient();
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [role, setRole] = useState("user");
 
   useEffect(() => {
@@ -54,10 +55,9 @@ export default function Sidebar() {
   ];
 
   const candidateItems = [
-    { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
-    { href: "/quiz/access", label: "Active Access", icon: Zap },
-    { href: "/dashboard/reports", label: "My Logs", icon: History },
-    { href: "/quiz/leaderboard", label: "Hall of Fame", icon: Trophy },
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/quiz/access", label: "Attendance List", icon: Zap },
+    { href: "/dashboard/reports", label: "Answer Analysis", icon: Activity },
   ];
 
   const navItems = isAdmin ? adminItems : candidateItems;
@@ -85,86 +85,141 @@ export default function Sidebar() {
         )}
       </AnimatePresence>
 
-      <aside className={`fixed left-0 top-0 bottom-0 w-[280px] bg-[#0F172A] text-white flex flex-col z-[65] transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] lg:translate-x-0 ${
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      }`}>
-        {/* Decorative Gradient */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
-           <div className="absolute -top-[10%] -left-[10%] w-[120%] h-[40%] bg-gradient-to-b from-blue-500/30 to-transparent blur-3xl saturate-150 rotate-12" />
-        </div>
-
+      <motion.aside 
+        onMouseEnter={() => setIsExpanded(true)}
+        onMouseLeave={() => setIsExpanded(false)}
+        initial={false}
+        animate={{ 
+          width: isExpanded ? 280 : 80,
+          translateX: (isOpen || !isExpanded) ? 0 : 0 
+        }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className={`fixed left-0 top-0 bottom-0 bg-white border-r border-slate-100 flex flex-col z-[65] transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] lg:translate-x-0 ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
         {/* Logo Section */}
-        <div className="px-10 h-28 flex items-center gap-4 relative z-10">
-          <div className="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(37,99,235,0.4)] border border-blue-400/30">
-            <ShieldCheck className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <span className="font-black text-2xl text-white tracking-tighter block leading-none">SKILL<span className="text-blue-500">FORGE</span></span>
-            <span className="text-[10px] font-black tracking-[0.4em] text-white/20 uppercase mt-2 block">Enterprise v4</span>
-          </div>
-        </div>
-
-        {/* Role Identity Chip */}
-        <div className="px-8 mb-10 relative z-10">
-           <div className={`p-5 rounded-[24px] border ${isAdmin ? "bg-blue-500/10 border-blue-500/20" : "bg-white/5 border-white/10"} flex items-center gap-4 group transition-all`}>
-              <div className={`w-2.5 h-2.5 rounded-full ${isAdmin ? "bg-blue-400 animate-pulse shadow-[0_0_10px_#60A5FA]" : "bg-white/20"}`} />
-              <div>
-                <span className={`text-[10px] font-black uppercase tracking-[0.2em] block leading-none ${isAdmin ? "text-blue-400" : "text-white/40"}`}>
-                  {isAdmin ? "Superuser Node" : "Standard Entity"}
-                </span>
-                <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest mt-1 block">Authentication Verified</span>
+        <div className="h-28 flex items-center px-[18px] relative z-10 overflow-hidden">
+           <div className="flex items-center gap-4 min-w-[240px]">
+              <div className="w-11 h-11 bg-blue-600 rounded-xl flex items-center justify-center shadow-xl shadow-blue-100 flex-shrink-0">
+                <ShieldCheck className="w-6 h-6 text-white" />
               </div>
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    className="flex flex-col"
+                  >
+                    <span className="font-black text-xl text-slate-900 tracking-tighter block leading-none">SKILL<span className="text-blue-600">FORGE</span></span>
+                    <span className="text-[8px] font-black tracking-[0.4em] text-slate-300 uppercase mt-1.5 block">Enterprise v4</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
            </div>
         </div>
 
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="px-6 mb-8 relative z-10 overflow-hidden"
+            >
+               <div className={`p-4 rounded-3xl border ${isAdmin ? "bg-blue-50 border-blue-100" : "bg-slate-50 border-slate-100"} flex items-center gap-4 transition-all hover:shadow-lg hover:shadow-slate-100 group`}>
+                  <div className={`w-2 h-2 rounded-full ${isAdmin ? "bg-blue-600 animate-pulse" : "bg-slate-300"}`} />
+                  <div className="flex flex-col min-w-0">
+                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] block leading-none truncate ${isAdmin ? "text-blue-600" : "text-slate-500"}`}>
+                      {isAdmin ? "Evaluator Node" : "Candidate Station"}
+                    </span>
+                    <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest mt-1.5 block">Identity Verified</span>
+                  </div>
+               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Navigation */}
-        <nav className="flex-1 px-6 space-y-2 relative z-10 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-[10px] space-y-1 relative z-10 overflow-y-auto custom-scrollbar overflow-x-hidden">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || (item.label !== "Control Center" && pathname.startsWith(item.href));
+            const isActive = pathname ? (pathname === item.href || (item.label !== "Dashboard" && item.label !== "Control Center" && pathname.startsWith(item.href))) : false;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center justify-between px-6 py-5 transition-all text-[11px] font-black uppercase tracking-[0.2em] rounded-[22px] group ${
+                className={`flex items-center px-[14px] py-4 transition-all rounded-xl group relative overflow-hidden h-[56px] min-w-[240px] ${
                   isActive 
-                    ? "bg-blue-600 text-white shadow-[0_15px_30px_-5px_rgba(37,99,235,0.4)]" 
-                    : "text-white/40 hover:bg-white/5 hover:text-white"
+                    ? "bg-blue-600 text-white shadow-xl shadow-blue-200" 
+                    : "text-slate-400 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
-                <div className="flex items-center gap-5">
-                  <item.icon size={18} className={isActive ? "text-white" : "text-white/20 group-hover:text-blue-400 transition-colors"} />
-                  <span>{item.label}</span>
+                <div className="flex items-center gap-6 flex-shrink-0">
+                  <item.icon size={22} className={isActive ? "text-white" : "text-slate-300 group-hover:text-blue-600 transition-colors flex-shrink-0"} />
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.span 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        className="text-[12px] font-black uppercase tracking-tight whitespace-nowrap"
+                      >
+                        {item.label}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </div>
-                {isActive && (
-                   <motion.div layoutId="active-pill" className="w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_10px_#fff]" />
+                
+                {isActive && isExpanded && (
+                  <motion.div layoutId="active-indicator" className="ml-auto w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
                 )}
               </Link>
             );
           })}
         </nav>
 
-        {/* Global Stats or Promo (Optional) */}
-        <div className="px-10 py-8 relative z-10">
-           <div className="bg-gradient-to-br from-white/5 to-transparent border border-white/5 rounded-3xl p-6">
-              <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-3 leading-none">Resource Load</p>
-              <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                 <motion.div initial={{ width: 0 }} animate={{ width: "42%" }} className="h-full bg-blue-500/50" />
-              </div>
-           </div>
-        </div>
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="px-8 py-6 relative z-10"
+            >
+               <div className="bg-slate-50 border border-slate-100 rounded-[24px] p-5 transition-all hover:bg-white hover:shadow-lg hover:shadow-slate-100 group">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 leading-none group-hover:text-blue-600 transition-colors">Resource Allocation</p>
+                  <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
+                     <motion.div initial={{ width: 0 }} animate={{ width: "68%" }} className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                  </div>
+               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Footer/Logout */}
-        <div className="p-8 border-t border-white/5 relative z-10">
+        <div className="p-3 border-t border-slate-50 relative z-10 overflow-hidden">
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center gap-5 px-6 py-5 text-[10px] font-black text-rose-500 hover:bg-rose-500/10 rounded-[22px] transition-all uppercase tracking-[0.3em] group"
+            className="w-full flex items-center px-[14px] py-4 text-[10px] font-black text-rose-500 hover:bg-rose-50 rounded-xl transition-all uppercase tracking-[0.2em] group min-w-[240px]"
           >
-             <LogOut size={18} className="group-hover:-translate-x-1.5 transition-transform" />
-             <span>Deactivate Sync</span>
+             <LogOut size={22} className="group-hover:-translate-x-1 transition-transform flex-shrink-0 mr-6" />
+             <AnimatePresence>
+               {isExpanded && (
+                 <motion.span
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    className="whitespace-nowrap"
+                 >
+                   Terminate Sync
+                 </motion.span>
+               )}
+             </AnimatePresence>
           </button>
         </div>
-      </aside>
+      </motion.aside>
     </>
   );
 }

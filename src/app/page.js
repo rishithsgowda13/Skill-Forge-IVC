@@ -8,10 +8,10 @@ import {
   Zap, 
   Lock,
   Loader2,
-  Fingerprint,
+  Users,
   Mail,
-  Dna,
-  UserPlus
+  Activity,
+  ChevronRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -91,7 +91,7 @@ export default function LoginPage() {
   if (!isMounted) return null;
 
   return (
-    <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-4 md:p-12 font-sans selection:bg-blue-100 overflow-hidden relative">
+    <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-8 md:p-12 lg:p-20 font-sans selection:bg-blue-100 overflow-hidden relative">
       {/* Background Ambience */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-blue-500/5 rounded-full blur-[120px] animate-pulse" />
@@ -100,18 +100,18 @@ export default function LoginPage() {
 
       <motion.div
         layout
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-[1200px] bg-white rounded-[40px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.08)] border border-slate-200 overflow-hidden relative z-10 flex min-h-[750px]"
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-[960px] bg-white rounded-[12px] shadow-[0_50px_120px_-30px_rgba(0,0,0,0.1)] border border-slate-200 overflow-hidden relative z-10 flex min-h-[540px]"
       >
         {/* Sliding Branding Panel */}
         <AnimatePresence mode="wait">
           <motion.div 
             key={isSignUp ? "signup-branding" : "login-branding"}
-            initial={{ x: isSignUp ? "150%" : "-150%" }}
-            animate={{ x: 0 }}
-            exit={{ x: isSignUp ? "150%" : "-150%" }}
-            transition={{ type: "spring", stiffness: 200, damping: 25 }}
+            initial={{ opacity: 0, x: isSignUp ? 40 : -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: isSignUp ? 40 : -40 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className={`hidden lg:flex bg-[#2563EB] text-white absolute top-0 bottom-0 z-20 w-[400px] flex-col justify-between p-16 ${isSignUp ? "right-0" : "left-0"}`}
           >
             <div className="relative z-10">
@@ -122,27 +122,27 @@ export default function LoginPage() {
                 <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">Skill Forge</h1>
               </div>
 
-              <div className="space-y-12">
-                <div className="space-y-6">
-                  <h2 className="text-5xl font-black leading-[0.9] tracking-tighter uppercase">
-                    {isSignUp ? "Initialize<br/>Node" : "System<br/>Sync"}
+              <div className="space-y-10">
+                <div className="space-y-4">
+                  <h2 className="text-3xl font-black leading-[0.9] tracking-tighter uppercase">
+                    {isSignUp ? "Connect Node" : "System Sync"}
                   </h2>
-                  <p className="text-blue-100/60 text-sm font-medium leading-relaxed max-w-[280px]">
+                  <p className="text-blue-100/60 text-[10px] font-medium leading-relaxed max-w-[200px]">
                     {isSignUp 
                       ? "Establish your node presence in the NEXUS protocol layers."
-                      : "Synchronize your authorization keys to resume intelligence protocols."}
+                      : "Synchronize your authorization keys."}
                   </p>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {[
                     { icon: Zap, text: "Instant Validation" },
                     { icon: Lock, text: "Military Grade Encryption" },
-                    { icon: Dna, text: "Biometric Identity Nodes" }
+                    { icon: Activity, text: "Biometric Identity Nodes" }
                   ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-4 text-white/80">
-                      <item.icon size={18} className="text-blue-300" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em]">{item.text}</span>
+                    <div key={i} className="flex items-center gap-4 text-white/70">
+                      <item.icon size={14} className="text-blue-300" />
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em]">{item.text}</span>
                     </div>
                   ))}
                 </div>
@@ -171,19 +171,21 @@ export default function LoginPage() {
         </AnimatePresence>
 
         {/* Content Area */}
-        <div className={`flex-1 flex flex-col justify-center transition-all duration-700 ease-in-out px-8 md:px-20 py-12 ${isSignUp ? "lg:pr-[400px]" : "lg:pl-[400px]"}`}>
-          <div className="max-w-[440px] mx-auto w-full space-y-10">
-            <div className="space-y-4">
-              <div className="lg:hidden flex items-center gap-3 mb-6">
+        <div 
+          className={`flex-1 flex flex-col justify-center transition-all duration-700 ease-in-out px-8 md:px-12 py-8 relative ${isSignUp ? "lg:mr-[400px]" : "lg:ml-[400px]"}`}
+        >
+          <div className="max-w-[690px] mx-auto w-full space-y-8 flex flex-col items-center">
+            <div className="w-full space-y-6 text-center flex flex-col items-center">
+              <div className="lg:hidden flex items-center justify-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white">
                   <ShieldCheck size={24} />
                 </div>
                 <span className="text-sm font-black uppercase tracking-[0.2em] text-slate-800">Skill Forge</span>
               </div>
-              <div className="space-y-1">
-                <p className="text-[11px] font-black text-blue-600 uppercase tracking-[0.4em]">Authorized Station 02</p>
-                <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase leading-none">
-                  {isSignUp ? "Node Enrollment" : "Authentication"}
+              <div className="space-y-3">
+                <p className="text-[11px] font-black text-blue-600 uppercase tracking-[0.5em] mb-4">Innovators and Visionaries Club</p>
+                <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none">
+                  Welcome
                 </h1>
               </div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Synchronize your identification parameters below.</p>
@@ -191,29 +193,40 @@ export default function LoginPage() {
 
             {/* Role/Action UI */}
             <div className="space-y-8">
-              <div className="bg-slate-100 p-1 rounded-2xl flex h-12 relative border border-slate-200">
-                <motion.div 
-                  layoutId="role-pill"
-                  animate={{ x: userRole === "candidate" ? 0 : "100%" }}
-                  className="absolute inset-y-1 left-1 w-[calc(50%-4px)] bg-white rounded-xl shadow-sm border border-slate-200"
-                />
+              <div className="bg-slate-100 p-1 rounded-full flex h-16 relative border border-slate-200">
                 <button 
+                  type="button"
                   onClick={() => setUserRole("candidate")}
-                  className={`flex-1 relative z-10 text-[10px] font-black uppercase tracking-widest transition-colors ${userRole === "candidate" ? "text-blue-600" : "text-slate-400"}`}
+                  className={`flex-1 relative z-10 text-[9px] font-black uppercase tracking-wider transition-colors duration-300 ${userRole === "candidate" ? "text-blue-600" : "text-slate-400"}`}
                 >
-                  Candidate Hub
+                  I'm a Candidate
+                  {userRole === "candidate" && (
+                    <motion.div 
+                      layoutId="role-pill-main"
+                      transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                      className="absolute inset-0 bg-white rounded-full shadow-sm border border-slate-200 -z-10"
+                    />
+                  )}
                 </button>
                 <button 
+                  type="button"
                   onClick={() => setUserRole("evaluator")}
-                  className={`flex-1 relative z-10 text-[10px] font-black uppercase tracking-widest transition-colors ${userRole === "evaluator" ? "text-blue-600" : "text-slate-400"}`}
+                  className={`flex-1 relative z-10 text-[9px] font-black uppercase tracking-wider transition-colors duration-300 ${userRole === "evaluator" ? "text-blue-600" : "text-slate-400"}`}
                 >
-                  Evaluator Node
+                  I'm an Evaluator
+                  {userRole === "evaluator" && (
+                    <motion.div 
+                      layoutId="role-pill-main"
+                      transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                      className="absolute inset-0 bg-white rounded-full shadow-sm border border-slate-200 -z-10"
+                    />
+                  )}
                 </button>
               </div>
 
               <form onSubmit={handleAuth} className="space-y-6">
                 {isSignUp && (
-                  <div className="space-y-2">
+                  <div className="space-y-2 text-left">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Authorized Name</label>
                     <input 
                       required
@@ -226,13 +239,13 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                <div className="space-y-2">
+                <div className="space-y-2 text-left">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Node Credentials</label>
                   <div className="relative group">
                     <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
                     <input 
                       required
-                      type="email"
+                      type="text"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="authorized@skillforge.io"
@@ -241,7 +254,7 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 text-left">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Security Protocol Key</label>
                   <div className="relative group">
                     <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
@@ -286,32 +299,19 @@ export default function LoginPage() {
                   <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center pt-2 leading-relaxed italic">{error}</p>
                 )}
 
-                <div className="relative py-4 flex items-center">
-                  <div className="flex-1 h-px bg-slate-100" />
-                  <span className="px-6 text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">External Node Validation</span>
-                  <div className="flex-1 h-px bg-slate-100" />
-                </div>
-
-                <button 
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  className="w-full bg-white border border-slate-200 py-4 rounded-xl flex items-center justify-center gap-4 hover:bg-slate-50 transition-all active:scale-[0.98] group"
-                >
-                  <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-5 h-5 group-hover:scale-110 transition-transform" alt="G" />
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-600">Sync with Google</span>
-                </button>
               </form>
 
-              <div className="text-center pt-4">
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                  {isSignUp ? "Already Enrolled?" : "New Node Signature?"}{" "}
+              <div className="text-center pt-4 flex flex-col items-center">
+                <div className="flex items-center gap-3 text-[10px] font-black text-slate-300 uppercase tracking-widest leading-relaxed">
+                  <span>{isSignUp ? "Already Enrolled?" : "New Node Signature?"}</span>
                   <button 
-                    onClick={toggleMode}
-                    className="text-blue-600 font-black hover:underline underline-offset-4 decoration-2"
+                    type="button"
+                    onClick={() => setIsSignUp(!isSignUp)}
+                    className="text-blue-600 hover:text-blue-700 transition-colors cursor-pointer font-extrabold underline decoration-2 underline-offset-4"
                   >
                     {isSignUp ? "Sync Credentials" : "Enroll Node"}
                   </button>
-                </p>
+                </div>
               </div>
             </div>
           </div>

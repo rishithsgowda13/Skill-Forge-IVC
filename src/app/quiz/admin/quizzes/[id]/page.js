@@ -12,7 +12,8 @@ import {
   AlertCircle,
   Settings,
   Target,
-  Hash
+  Hash,
+  CheckCircle2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -23,7 +24,11 @@ export default function QuizConfigurePage({ params }) {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [newQuestion, setNewQuestion] = useState({ content: "", correct_answer: "" });
+  const [newQuestion, setNewQuestion] = useState({ 
+    content: "", 
+    correct_answer: "A",
+    options: ["", "", "", ""]
+  });
   
   const supabase = createClient();
   const router = useRouter();
@@ -56,19 +61,20 @@ export default function QuizConfigurePage({ params }) {
     if (!newQuestion.content.trim()) return;
 
     setSubmitting(true);
-    const { error } = await supabase
-      .from("questions")
-      .insert([
-        { 
-          quiz_id: id, 
-          content: newQuestion.content, 
-          correct_answer: newQuestion.correct_answer,
-          order_index: questions.length 
-        }
-      ]);
+      const { error } = await supabase
+        .from("questions")
+        .insert([
+          { 
+            quiz_id: id, 
+            content: newQuestion.content, 
+            options: newQuestion.options,
+            correct_answer: newQuestion.correct_answer,
+            order_index: questions.length 
+          }
+        ]);
 
     if (!error) {
-      setNewQuestion({ content: "", correct_answer: "" });
+      setNewQuestion({ content: "", correct_answer: "A", options: ["", "", "", ""] });
       loadData();
     }
     setSubmitting(false);
@@ -142,17 +148,42 @@ export default function QuizConfigurePage({ params }) {
                         />
                      </div>
 
+                     <div className="grid grid-cols-2 gap-6">
+                        {['A', 'B', 'C', 'D'].map((label, idx) => (
+                           <div key={label} className="space-y-3">
+                              <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] ml-4">Option {label}</label>
+                              <input 
+                                required
+                                value={newQuestion.options[idx]}
+                                onChange={(e) => {
+                                   const newOpts = [...newQuestion.options];
+                                   newOpts[idx] = e.target.value;
+                                   setNewQuestion({...newQuestion, options: newOpts});
+                                }}
+                                placeholder={`Enter option ${label}...`}
+                                className="w-full bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-[24px] py-4 px-6 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] transition-all"
+                              />
+                           </div>
+                        ))}
+                     </div>
+
                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] ml-4">Response Key</label>
-                        <div className="relative">
-                           <Target size={14} className="absolute left-6 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
-                           <input 
-                             required
-                             value={newQuestion.correct_answer}
-                             onChange={(e) => setNewQuestion({...newQuestion, correct_answer: e.target.value})}
-                             placeholder="Correct authentication value..."
-                             className="w-full bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-[32px] py-5 pl-14 pr-8 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] transition-all"
-                           />
+                        <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] ml-4">Correct Response Node</label>
+                        <div className="flex gap-4">
+                           {['A', 'B', 'C', 'D'].map((label) => (
+                              <button
+                                key={label}
+                                type="button"
+                                onClick={() => setNewQuestion({...newQuestion, correct_answer: label})}
+                                className={`flex-1 py-4 rounded-2xl font-black text-xs transition-all border-2 ${
+                                  newQuestion.correct_answer === label 
+                                    ? "bg-[#2563EB] text-white border-[#2563EB] shadow-lg shadow-blue-200" 
+                                    : "bg-white text-[#94A3B8] border-[#E2E8F0] hover:border-[#2563EB]/40"
+                                }`}
+                              >
+                                 {label}
+                              </button>
+                           ))}
                         </div>
                      </div>
 
@@ -199,12 +230,18 @@ export default function QuizConfigurePage({ params }) {
                                <p className="text-sm font-bold text-[#0F172A] leading-relaxed italic border-l-4 border-blue-500 pl-4">
                                   "{q.content}"
                                 </p>
-                               <div className="flex items-center gap-4">
-                                  <div className="px-4 py-1.5 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-2">
-                                     <Target size={10} className="text-emerald-500" />
-                                     <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">{q.correct_answer}</span>
-                                  </div>
-                               </div>
+                                <div className="grid grid-cols-2 gap-3 pb-2">
+                                   {q.options?.map((opt, i) => (
+                                      <div key={i} className={`px-4 py-3 rounded-2xl text-[10px] font-bold border flex items-center justify-between ${
+                                        String.fromCharCode(65 + i) === q.correct_answer 
+                                          ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
+                                          : "bg-gray-50 border-gray-100 text-gray-500"
+                                      }`}>
+                                         <span className="truncate max-w-[120px]">{opt}</span>
+                                         {String.fromCharCode(65 + i) === q.correct_answer && <CheckCircle2 size={12} className="text-emerald-500" />}
+                                      </div>
+                                   ))}
+                                </div>
                             </div>
                          </div>
                          <button 
