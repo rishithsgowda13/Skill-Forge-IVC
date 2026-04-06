@@ -52,6 +52,11 @@ export default function LoginPage() {
         router.push("/quiz/admin");
         return;
       }
+      if (email === "3" && password === "3") {
+        document.cookie = "mock_session=parent; path=/";
+        router.push("/dashboard");
+        return;
+      }
 
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { setError(error.message); setLoading(false); }
