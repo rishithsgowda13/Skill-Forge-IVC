@@ -129,44 +129,45 @@ export default function AdminDashboard() {
   return (
     <div className="flex flex-col p-8 md:p-14 space-y-10">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 md:gap-0">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-black text-[#0F172A] tracking-tighter">Dashboard Overview</h1>
-          <p className="text-meta">REAL-TIME INFRASTRUCTURE MONITORING</p>
+          <h1 className="text-2xl md:text-3xl font-black text-[#0F172A] tracking-tighter uppercase">Dashboard Overview</h1>
+          <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.4em] mt-1">REAL-TIME MONITORING</p>
         </motion.div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-pill border border-card-border shadow-sm">
-            <div className="w-2 h-2 bg-success-green rounded-full animate-pulse" />
-            <span className="text-xs font-semibold text-[#0F172A]">SYSTEMS ONLINE</span>
+        <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-[12px] border border-[#E2E8F0] shadow-sm">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-[9px] font-black text-[#0F172A] uppercase tracking-widest">SYSTEMS ONLINE</span>
           </div>
           <div className="w-10 h-10 bg-[#2563EB] rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-blue-200">BK</div>
         </div>
       </div>
 
         {/* 6-Column Stats Grid - Responsive scaling */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
           {statsDisplay.map((stat, i) => (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.05 }}
-              className="dashboard-card flex flex-col items-start gap-4 border-[#E2E8F0]"
+              className="bg-white p-6 rounded-[28px] md:rounded-[32px] border border-[#E2E8F0] shadow-sm flex flex-col items-start gap-4 transition-all hover:shadow-xl hover:shadow-blue-50/50"
             >
-              <div className="w-10 h-10 rounded-inner flex items-center justify-center bg-gray-50/50 border border-gray-100">
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-gray-50/50 border border-gray-100">
                 <stat.icon size={22} color={stat.color} />
               </div>
               <div>
                 <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">{stat.label}</p>
-                <h3 className="text-2xl font-black text-[#0F172A] leading-tight">{stat.value}</h3>
+                <h3 className="text-xl md:text-2xl font-black text-[#0F172A] leading-tight">{stat.value}</h3>
               </div>
             </motion.div>
           ))}
         </div>
 
         {/* Leaderboard Section */}
-        <div className="dashboard-card space-y-8 border-[#E2E8F0] shadow-xl">
-          <div className="flex items-center justify-between border-b pb-6">
+        <div className="bg-white p-6 md:p-10 rounded-[40px] md:rounded-[48px] border border-[#E2E8F0] shadow-[0_20px_50px_-20px_rgba(37,99,235,0.08)] space-y-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-50 pb-6 gap-4 sm:gap-0">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-[#F0F7FF] rounded-xl">
                  <Trophy size={20} className="text-[#2563EB]" />
@@ -179,9 +180,9 @@ export default function AdminDashboard() {
           </div>
 
           {!loading && leaderboard.length === 0 ? (
-             <div className="py-10 text-center text-meta uppercase font-bold tracking-widest opacity-50">No rankings synchronized yet</div>
+             <div className="py-10 text-center text-[10px] uppercase font-black tracking-widest opacity-40">No rankings synchronized yet</div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 md:gap-y-6">
               {leaderboard.map((item, index) => (
                 <motion.div
                   key={item.id}
@@ -200,7 +201,7 @@ export default function AdminDashboard() {
                       {index + 1}
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center font-bold text-[10px] border border-white shadow-subtle overflow-hidden">
+                      <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center font-bold text-[10px] border border-white shadow-sm overflow-hidden">
                         <img 
                           src={item.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.user_id}`} 
                           alt=""
@@ -219,7 +220,7 @@ export default function AdminDashboard() {
                      <span className="text-sm font-black text-[#0F172A]">{item.total_score}</span>
                      <div className="flex items-center gap-1">
                         <Circle size={4} fill="#2563EB" className="text-[#2563EB]" />
-                        <span className="text-[8px] font-black text-[#2563EB] uppercase">QUALIFIED</span>
+                        <span className="text-[8px] font-black text-[#2563EB] uppercase tracking-widest">QUALIFIED</span>
                      </div>
                   </div>
                 </motion.div>
@@ -229,7 +230,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Two-Column Bottom Section */}
-        <div className="grid grid-cols-2 gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
           {/* Platform Flow Card */}
           <div className="dashboard-card space-y-8 border-[#E2E8F0] shadow-xl">
             <div className="flex items-center justify-between border-b pb-6">

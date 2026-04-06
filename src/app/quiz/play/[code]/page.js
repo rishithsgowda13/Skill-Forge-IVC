@@ -91,16 +91,66 @@ export default function CandidatePlayPage() {
     }
   }, [quiz]);
 
+  const [startTime, setStartTime] = useState(null);
+  const [showOptions, setShowOptions] = useState(false);
+
+  useEffect(() => {
+    if (quiz?.status === 'showing-question') {
+      setShowOptions(false);
+      const timer = setTimeout(() => {
+        setShowOptions(true);
+        setStartTime(Date.now());
+      }, 3000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowOptions(false);
+    }
+  }, [quiz?.status, quiz?.current_question_index]);
+
   const handleSelect = async (optionIndex) => {
-    if (selectedOption !== null || quiz?.status !== 'showing-question') return;
+    if (selectedOption !== null || quiz?.status !== 'showing-question' || !currentQuestion) return;
     
+    const elapsed = (Date.now() - startTime) / 1000;
     setSelectedOption(optionIndex);
+    
     // In a real app, record the answer to Supabase immediately
     const answer = String.fromCharCode(65 + optionIndex); // A, B, C, D
     
-    // Calculate score (mock logic: correct if it matches correct_answer)
+    // Calculate score with Response-Time Decay logic
     const isCorrect = answer === currentQuestion.correct_answer;
-    if (isCorrect) setScore(prev => prev + 100);
+    if (isCorrect) {
+      const timeLimit = currentQuestion.time_limit || 15;
+      const basePoints = timeLimit * 10;
+      // Formula: (time_limit - floor(elapsed)) * 10
+      // If elapsed is 0.5s (1st second), penalty is 0 -> 150pts
+      // If elapsed is 1.5s (2nd second), penalty is 1 -> 140pts
+      const penalty = Math.floor(elapsed);
+      const pointsEarned = Math.max(10, basePoints - (penalty * 10));
+      
+      setScore(prev => prev + pointsEarned);
+
+      // Save answer to Supabase
+      await supabase.from('submissions').insert([{
+        quiz_id: quiz.id,
+        user_id: user.id,
+        question_id: currentQuestion.id,
+        answer: answer,
+        is_correct: true,
+        points: pointsEarned,
+        time_taken: elapsed
+      }]);
+    } else {
+      // Save incorrect answer
+      await supabase.from('submissions').insert([{
+        quiz_id: quiz.id,
+        user_id: user.id,
+        question_id: currentQuestion.id,
+        answer: answer,
+        is_correct: false,
+        points: 0,
+        time_taken: elapsed
+      }]);
+    }
   };
 
   if (loading) {
@@ -188,67 +238,83 @@ export default function CandidatePlayPage() {
        </div>
 
        {/* Options Grid - NO QUESTION TEXT PERMITTED */}
-       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <AnimatePresence mode="wait">
-             {quiz.status === 'showing-question' ? (
-                <>
-                    {[0, 1, 2, 3].map((idx) => {
-                      const colors = [
-                        'bg-[#2563EB] shadow-blue-200',
-                        'bg-[#EF4444] shadow-red-200',
-                        'bg-[#F59E0B] shadow-amber-200',
-                        'bg-[#10B981] shadow-emerald-200'
-                      ];
-                      const labels = ['A', 'B', 'C', 'D'];
-                      const optionText = currentQuestion?.options?.[idx] || labels[idx];
-                      
-                      return (
-                        <motion.button
-                          key={idx}
-                          initial={{ scale: 0.9, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          exit={{ scale: 0.9, opacity: 0 }}
-                          whileTap={{ scale: 0.95 }}
-                          disabled={selectedOption !== null}
-                          onClick={() => handleSelect(idx)}
-                          className={`relative rounded-[40px] flex flex-col items-center justify-center text-white transition-all overflow-hidden p-8 text-center group/opt ${
-                            selectedOption === idx ? 'ring-8 ring-primary-blue/20 scale-[0.98]' : 
-                            selectedOption !== null ? 'opacity-30 grayscale-[30%]' : ''
-                          } ${colors[idx]} shadow-2xl`}
-                        >
-                           <span className="text-8xl font-black opacity-10 absolute inset-0 flex items-center justify-center scale-[3] pointer-events-none group-hover/opt:scale-[4] transition-transform duration-700">
-                             {labels[idx]}
-                           </span>
-                           
-                           <div className="relative z-10 flex flex-col items-center gap-4">
-                              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl font-black mb-2 border border-white/30">
-                                 {labels[idx]}
-                              </div>
-                              <span className="text-xl md:text-2xl font-extrabold tracking-tight leading-tight max-w-[280px]">
-                                {optionText}
-                              </span>
-                           </div>
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+           <AnimatePresence mode="wait">
+              {quiz?.status === 'showing-question' && showOptions ? (
+                 <>
+                     {[0, 1, 2, 3].map((idx) => {
+                       const colors = [
+                         'bg-[#2563EB] shadow-blue-200',
+                         'bg-[#EF4444] shadow-red-200',
+                         'bg-[#F59E0B] shadow-amber-200',
+                         'bg-[#10B981] shadow-emerald-200'
+                       ];
+                       const labels = ['A', 'B', 'C', 'D'];
+                       const optionText = currentQuestion?.options?.[idx] || labels[idx];
+                       
+                       return (
+                         <motion.button
+                           key={idx}
+                           initial={{ scale: 0.9, opacity: 0 }}
+                           animate={{ scale: 1, opacity: 1 }}
+                           exit={{ scale: 0.9, opacity: 0 }}
+                           whileTap={{ scale: 0.95 }}
+                           disabled={selectedOption !== null}
+                           onClick={() => handleSelect(idx)}
+                           className={`relative rounded-[40px] flex flex-col items-center justify-center text-white transition-all overflow-hidden p-8 text-center group/opt ${
+                             selectedOption === idx ? 'ring-8 ring-primary-blue/20 scale-[0.98]' : 
+                             selectedOption !== null ? 'opacity-30 grayscale-[30%]' : ''
+                           } ${colors[idx]} shadow-2xl`}
+                         >
+                            <span className="text-8xl font-black opacity-10 absolute inset-0 flex items-center justify-center scale-[3] pointer-events-none group-hover/opt:scale-[4] transition-transform duration-700">
+                              {labels[idx]}
+                            </span>
+                            
+                            <div className="relative z-10 flex flex-col items-center gap-4">
+                               <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl font-black mb-2 border border-white/30">
+                                  {labels[idx]}
+                               </div>
+                               <span className="text-xl md:text-2xl font-extrabold tracking-tight leading-tight max-w-[280px]">
+                                 {optionText}
+                               </span>
+                            </div>
 
-                           {selectedOption === idx && (
-                              <div className="absolute top-8 right-8">
-                                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                    <CheckCircle2 className="w-10 h-10 text-white" />
-                                 </motion.div>
-                              </div>
-                           )}
-                        </motion.button>
-                      );
-                    })}
-                </>
-             ) : (
+                            {selectedOption === idx && (
+                               <div className="absolute top-8 right-8">
+                                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                                     <CheckCircle2 className="w-10 h-10 text-white" />
+                                  </motion.div>
+                               </div>
+                            )}
+                         </motion.button>
+                       );
+                     })}
+                 </>
+              ) : quiz?.status === 'showing-question' ? (
+                <div className="col-span-full bg-white/50 backdrop-blur-md rounded-[40px] border-4 border-dashed border-primary-blue/20 flex flex-col items-center justify-center p-12 text-center relative overflow-hidden animate-pulse">
+                   <div className="absolute top-0 left-0 w-full h-1 bg-primary-blue/20">
+                      <motion.div 
+                        initial={{ width: 0 }} 
+                        animate={{ width: '100%' }} 
+                        transition={{ duration: 3, ease: 'linear' }} 
+                        className="h-full bg-primary-blue shadow-[0_0_15px_rgba(37,99,235,0.5)]" 
+                      />
+                   </div>
+                   <div className="w-20 h-20 bg-primary-blue/10 rounded-full flex items-center justify-center mb-6">
+                      <Clock className="text-primary-blue w-10 h-10 animate-spin-slow" />
+                   </div>
+                   <h2 className="text-3xl font-black text-[#0F172A] uppercase tracking-tighter mb-4">Read the Question</h2>
+                   <p className="text-[12px] font-black text-[#94A3B8] uppercase tracking-[0.4em] max-w-sm">Data Injection sequence initialized. Synchronize with the primary broadcast terminal for intelligence gathering.</p>
+                </div>
+              ) : (
                 <div className="col-span-full bg-white rounded-[40px] border border-[#E2E8F0] border-dashed flex flex-col items-center justify-center p-12 text-center">
                    <Monitor className="text-[#94A3B8] w-16 h-16 mb-6 animate-pulse" />
-                   <h2 className="text-2xl font-black text-[#0F172A] uppercase tracking-tighter">Read the Question</h2>
+                   <h2 className="text-2xl font-black text-[#0F172A] uppercase tracking-tighter">Waiting Terminal</h2>
                    <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] mt-2">Analysis broadcast on main display terminal</p>
                 </div>
-             )}
-          </AnimatePresence>
-       </div>
+              )}
+           </AnimatePresence>
+        </div>
 
        {/* Bottom Identity Node */}
        <div className="p-4 flex items-center justify-center gap-3">
