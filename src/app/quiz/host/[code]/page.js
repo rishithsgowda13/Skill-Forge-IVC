@@ -30,6 +30,21 @@ export default function AdminHostPage() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [countdown, setCountdown] = useState(0);
+  const [status, setStatus] = useState('lobby');
+  const [loading, setLoading] = useState(true);
+  const [timer, setTimer] = useState(0);
+  const [showOptions, setShowOptions] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (status === 'showing-question') {
+      setShowOptions(false);
+      const timer = setTimeout(() => setShowOptions(true), 3000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowOptions(false);
+    }
+  }, [status, currentQuestion?.id]);
 
   useEffect(() => {
     async function loadHostData() {
@@ -121,7 +136,7 @@ export default function AdminHostPage() {
   const startQuiz = async () => {
     executeCountdown(async () => {
       await updateQuizStatus('showing-question', 0);
-      startTimer(30);
+      setTimeout(() => startTimer(30), 3000);
     });
   };
 
@@ -130,7 +145,7 @@ export default function AdminHostPage() {
     if (nextIdx < quiz.questions.length) {
       executeCountdown(async () => {
         await updateQuizStatus('showing-question', nextIdx);
-        startTimer(30);
+        setTimeout(() => startTimer(30), 3000);
       });
     } else {
       await updateQuizStatus('finished');
@@ -159,10 +174,10 @@ export default function AdminHostPage() {
   if (loading) return null;
 
   return (
-    <div className="h-screen bg-[#0F172A] text-white flex font-sans overflow-hidden">
-       {/* Main Display (75% width) - THE TV AREA */}
-       <div className="flex-1 flex flex-col p-16 relative">
-          <header className="flex justify-between items-center mb-10 w-full">
+    <div className="min-h-screen lg:h-screen bg-[#0F172A] text-white flex flex-col lg:flex-row font-sans lg:overflow-hidden">
+       {/* Main Display (TV AREA) */}
+       <div className="flex-1 flex flex-col p-6 md:p-16 relative overflow-y-auto lg:overflow-hidden">
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 w-full">
              <div className="flex items-center gap-4">
                 <div className="p-3 bg-white/10 rounded-2xl border border-white/5">
                    <Zap className="text-primary-blue w-6 h-6" />
@@ -247,21 +262,31 @@ export default function AdminHostPage() {
                          </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-8">
-                         {currentQuestion.options?.map((opt, idx) => {
-                            const colors = ['bg-[#2563EB]', 'bg-[#EF4444]', 'bg-[#F59E0B]', 'bg-[#10B981]'];
-                            const labels = ['A', 'B', 'C', 'D'];
-                            return (
-                               <div key={idx} className="flex items-center gap-6 p-8 bg-white/5 border border-white/10 rounded-[40px] transition-all group overflow-hidden relative">
-                                  <div className={`${colors[idx]} w-16 h-16 rounded-[24px] flex items-center justify-center font-black text-2xl shadow-xl relative z-10`}>
-                                     {labels[idx]}
-                                  </div>
-                                  <span className="text-2xl font-bold tracking-tight opacity-70 relative z-10">{opt}</span>
-                                  <div className={`absolute left-0 top-0 bottom-0 w-2 ${colors[idx]} opacity-40`} />
-                               </div>
-                            )
-                         })}
-                      </div>
+                      {showOptions ? (
+                        <div className="grid grid-cols-2 gap-8">
+                           {currentQuestion.options?.map((opt, idx) => {
+                              const colors = ['bg-[#2563EB]', 'bg-[#EF4444]', 'bg-[#F59E0B]', 'bg-[#10B981]'];
+                              const labels = ['A', 'B', 'C', 'D'];
+                              return (
+                                 <div key={idx} className="flex items-center gap-6 p-8 bg-white/5 border border-white/10 rounded-[40px] transition-all group overflow-hidden relative">
+                                    <div className={`${colors[idx]} w-16 h-16 rounded-[24px] flex items-center justify-center font-black text-2xl shadow-xl relative z-10`}>
+                                       {labels[idx]}
+                                    </div>
+                                    <span className="text-2xl font-bold tracking-tight opacity-70 relative z-10">{opt}</span>
+                                    <div className={`absolute left-0 top-0 bottom-0 w-2 ${colors[idx]} opacity-40`} />
+                                 </div>
+                              )
+                           })}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center p-20 bg-white/5 border border-dashed border-white/10 rounded-[48px] animate-pulse">
+                           <div className="flex items-center gap-4 text-primary-blue text-sm font-black uppercase tracking-[0.5em] mb-4">
+                              <Zap className="animate-spin" />
+                              <span>BROADCAST SYNC IN PROGRESS</span>
+                           </div>
+                           <p className="text-white/40 text-sm font-black uppercase tracking-[0.3em]">Auditing Node Intelligence. Options initializing in 3s...</p>
+                        </div>
+                      )}
                    </motion.div>
                 )}
 
@@ -336,8 +361,8 @@ export default function AdminHostPage() {
           </footer>
        </div>
 
-       {/* Real-time Leaderboard (25% width) - RIGHT SIDEBAR */}
-       <div className="w-[450px] bg-white text-[#0F172A] flex flex-col p-12 overflow-hidden relative shadow-[-50px_0_100px_rgba(0,0,0,0.2)]">
+        {/* Real-time Leaderboard (25% width) - RIGHT SIDEBAR */}
+        <div className="w-full lg:w-[450px] bg-white text-[#0F172A] flex flex-col p-8 md:p-12 overflow-hidden relative shadow-[-50px_0_100px_rgba(0,0,0,0.2)]">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary-blue/5 rounded-full blur-3xl" />
           
           <div className="relative z-10 mb-12">
