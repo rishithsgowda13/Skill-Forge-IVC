@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import SentinelProtocol from "@/components/quiz/SentinelProtocol";
 import { 
   Zap, 
   Lock, 
@@ -12,7 +13,8 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
-  Fingerprint
+  Fingerprint,
+  MonitorOff
 } from "lucide-react";
 
 export default function CandidatePlayPage() {
@@ -57,7 +59,7 @@ export default function CandidatePlayPage() {
 
       // Subscribe to changes and presence
       const channel = supabase
-        .channel(`quiz_session_${code}`)
+        .channel(`quiz_session_${code.toUpperCase()}`)
         .on(
           'postgres_changes', 
           { event: '*', schema: 'public', table: 'quizzes', filter: `access_code=eq.${code.toUpperCase()}` },
@@ -220,9 +222,16 @@ export default function CandidatePlayPage() {
 
   // Active Play Mode
   return (
-    <div className="h-screen bg-[#F0F2F5] flex flex-col p-6 space-y-6 overflow-hidden">
+    <div className="h-screen bg-[#F0F2F5] flex flex-col p-6 space-y-6 overflow-hidden relative">
+      <SentinelProtocol 
+         active={quiz?.status === 'showing-question'} 
+         onViolation={(count, type) => {
+           console.warn(`INTEGRITY ALERT: ${type} breach count ${count}`);
+         }}
+       />
+       
        {/* Top Status Bar */}
-       <div className="flex items-center justify-between p-6 bg-white rounded-[32px] border border-[#E2E8F0] shadow-sm">
+       <div className="flex items-center justify-between p-6 bg-white rounded-[32px] border border-[#E2E8F0] shadow-sm relative z-10">
           <div className="flex items-center gap-4">
              <div className="w-10 h-10 bg-primary-blue/10 rounded-xl flex items-center justify-center text-primary-blue">
                 <Zap size={20} />
