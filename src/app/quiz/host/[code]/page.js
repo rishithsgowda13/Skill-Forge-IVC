@@ -28,6 +28,7 @@ export default function AdminHostPage() {
   const [participants, setParticipants] = useState([]);
   const [joinCount, setJoinCount] = useState(0);
   const [presentUsers, setPresentUsers] = useState([]);
+  const quizRef = useRef(null);
   const [leaderboard, setLeaderboard] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [countdown, setCountdown] = useState(0);
@@ -61,6 +62,7 @@ export default function AdminHostPage() {
       }
       
       setQuiz(quizData);
+      quizRef.current = quizData;
       
       // If quiz is already finished when admin enters, reset it to lobby for a fresh start
       if (quizData.status === 'finished') {
@@ -92,8 +94,9 @@ export default function AdminHostPage() {
           const usersMap = {};
           Object.values(state).forEach(presences => {
             presences.forEach(p => {
-              if (p.user_id && p.full_name) {
-                usersMap[p.user_id] = p.full_name;
+              if (p.user_id) {
+                // Use full_name if available, otherwise fallback to ID fragment
+                usersMap[p.user_id] = p.full_name || `Node-${p.user_id.substring(0, 5)}`;
               }
             });
           });
@@ -107,11 +110,11 @@ export default function AdminHostPage() {
 
       // HEARTBEAT SYNC: Every 10s broadcast state to ensure mobile nodes catch up
       const heartbeat = setInterval(() => {
-        if (quizData) {
+        if (quizRef.current) {
           channel.send({
             type: 'broadcast',
             event: 'state_update',
-            payload: quizData
+            payload: quizRef.current
           });
         }
       }, 10000);
@@ -190,7 +193,11 @@ export default function AdminHostPage() {
       payload: { ...quiz, ...payload }
     });
 
-    setQuiz(prev => ({ ...prev, ...payload }));
+    setQuiz(prev => {
+       const updated = { ...prev, ...payload };
+       quizRef.current = updated;
+       return updated;
+    });
     setStatus(newStatus);
     
     // Refresh leaderboard to catch present users
@@ -223,8 +230,10 @@ export default function AdminHostPage() {
     setLeaderboard([]);
     
     executeCountdown(async () => {
+      const firstQuestion = quiz.questions[0];
+      const timeLimit = firstQuestion?.time_limit || 30;
       await updateQuizStatus('showing-question', 0);
-      setTimeout(() => startTimer(30), 3000);
+      setTimeout(() => startTimer(timeLimit), 3000);
     });
   };
 
@@ -232,8 +241,10 @@ export default function AdminHostPage() {
     const nextIdx = quiz.current_question_index + 1;
     if (nextIdx < quiz.questions.length) {
       executeCountdown(async () => {
+        const nextQuestion = quiz.questions[nextIdx];
+        const timeLimit = nextQuestion?.time_limit || 30;
         await updateQuizStatus('showing-question', nextIdx);
-        setTimeout(() => startTimer(30), 3000);
+        setTimeout(() => startTimer(timeLimit), 3000);
       });
     } else {
       await updateQuizStatus('finished');
@@ -283,12 +294,12 @@ export default function AdminHostPage() {
               <div className="bg-white/5 border border-white/10 px-8 py-3 rounded-2xl flex items-center gap-6">
                  <div className="flex items-center gap-3">
                     <Users className="text-primary-blue w-4 h-4" />
-                    <span className="text-[12px] font-black text-white">{joinCount} JOINED</span>
+                    <span className="text-[18px] font-black text-white">{joinCount} JOINED</span>
                  </div>
                  <div className="w-1 h-3 bg-white/10" />
                  <div className="flex items-center gap-3">
                     <Monitor className="text-white/40 w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/40">TV DISPLAY ACTIVE</span>
+                    <span className="text-[15px] font-black uppercase tracking-widest text-white/40">TV DISPLAY ACTIVE</span>
                  </div>
                  <div className="w-1 h-3 bg-white/10" />
                  <span className="text-xs font-black tracking-[0.2em]">{code}</span>
@@ -310,7 +321,7 @@ export default function AdminHostPage() {
                            <Users size={120} className="text-primary-blue" />
                         </div>
                         <h1 className="text-8xl font-black tracking-tighter uppercase leading-none">JOIN THE NODE</h1>
-                        <p className="text-[11px] font-black text-white/40 uppercase tracking-[0.6em]">Scanning for synchronized candidate signals</p>
+                        <p className="text-[16.5px] font-black text-white/40 uppercase tracking-[0.6em]">Scanning for synchronized candidate signals</p>
                      </div>
 
                      <div className="flex flex-wrap justify-center gap-3 px-20">
@@ -322,16 +333,16 @@ export default function AdminHostPage() {
                             className="bg-primary-blue/10 border border-primary-blue/20 px-6 py-3 rounded-2xl flex items-center gap-3"
                           >
                              <div className="w-1.5 h-1.5 rounded-full bg-primary-blue animate-pulse" />
-                             <span className="text-[10px] font-black text-primary-blue uppercase tracking-widest">{user.full_name}</span>
+                             <span className="text-[15px] font-black text-primary-blue uppercase tracking-widest">{user.full_name}</span>
                           </motion.div>
                         ))}
                         {presentUsers.length === 0 && (
-                          <div className="text-[10px] font-black text-white/10 uppercase tracking-[0.4em] animate-pulse">Waiting for neural handshake...</div>
+                          <div className="text-[15px] font-black text-white/10 uppercase tracking-[0.4em] animate-pulse">Waiting for neural handshake...</div>
                         )}
                      </div>
 
                      <div className="bg-white text-[#0F172A] p-12 rounded-[56px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] flex flex-col gap-4">
-                        <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Protocol Access Key</span>
+                        <span className="text-[15px] font-black uppercase tracking-[0.4em] opacity-40">Protocol Access Key</span>
                         <span className="text-9xl font-black tracking-widest leading-none">{code}</span>
                      </div>
 
@@ -360,7 +371,7 @@ export default function AdminHostPage() {
                          </div>
                          <div className="relative z-10">
                             <div className="w-40 h-40 rounded-full border-8 border-primary-blue/20 flex flex-col items-center justify-center relative bg-[#0F172A] shadow-inner">
-                               <span className="text-[10px] font-black text-white/40 mb-1">SEC</span>
+                               <span className="text-[15px] font-black text-white/40 mb-1">SEC</span>
                                <span className="text-5xl font-black tabular-nums">{timer}</span>
                                <motion.div 
                                  initial={{ rotate: 0 }}
@@ -438,19 +449,19 @@ export default function AdminHostPage() {
                       <div className="space-y-6">
                          <Trophy size={160} className="text-amber-400 mx-auto drop-shadow-[0_0_50px_rgba(251,191,36,0.3)]" />
                          <h1 className="text-9xl font-black tracking-[0.1em] uppercase leading-none">ELITE NODE ESTABLISHED</h1>
-                         <p className="text-[11px] font-black text-white/40 uppercase tracking-[0.6em]">All protocol datasets have been successfully processed</p>
+                         <p className="text-[16.5px] font-black text-white/40 uppercase tracking-[0.6em]">All protocol datasets have been successfully processed</p>
                       </div>
 
                       <div className="flex gap-4 justify-center">
                          <button 
                            onClick={() => setStatus('lobby')}
-                           className="bg-white/10 hover:bg-white/20 border border-white/10 px-12 py-5 rounded-[22px] font-black text-[10px] uppercase tracking-widest transition-all"
+                           className="bg-white/10 hover:bg-white/20 border border-white/10 px-12 py-5 rounded-[22px] font-black text-[15px] uppercase tracking-widest transition-all"
                          >
                            Reset Session
                          </button>
                          <button 
                            onClick={() => router.push('/quiz/admin')}
-                           className="bg-primary-blue hover:bg-blue-600 px-12 py-5 rounded-[22px] font-black text-[10px] uppercase tracking-widest transition-all shadow-2xl"
+                           className="bg-primary-blue hover:bg-blue-600 px-12 py-5 rounded-[22px] font-black text-[15px] uppercase tracking-widest transition-all shadow-2xl"
                          >
                            Archive Result
                          </button>
@@ -461,11 +472,11 @@ export default function AdminHostPage() {
           </main>
 
           <footer className="absolute bottom-10 left-16 right-16 flex justify-between items-center">
-             <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.5em]">Skill Forge Neutral Network v4.2</div>
+             <div className="text-[15px] font-black text-white/20 uppercase tracking-[0.5em]">Skill Forge Neutral Network v4.2</div>
              <div className="flex items-center gap-8">
                 <div className="bg-white/5 border border-white/10 px-6 py-2 rounded-full flex items-center gap-3">
                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                   <span className="text-[9px] font-black tracking-widest text-white/40">SIGNAL STRENGTH: 98%</span>
+                   <span className="text-[13.5px] font-black tracking-widest text-white/40">SIGNAL STRENGTH: 98%</span>
                 </div>
              </div>
           </footer>
@@ -482,7 +493,7 @@ export default function AdminHostPage() {
                 </div>
                 <h3 className="text-2xl font-black uppercase tracking-tighter">Elite Registry</h3>
              </div>
-             <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] leading-none mb-4">Global Ranking Matrix</p>
+             <p className="text-[15px] font-black text-[#94A3B8] uppercase tracking-[0.3em] leading-none mb-4">Global Ranking Matrix</p>
              <div className="w-full h-1 bg-gray-50 flex">
                 <div className="w-1/3 h-full bg-primary-blue" />
              </div>

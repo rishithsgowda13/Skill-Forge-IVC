@@ -195,7 +195,7 @@ export default function CandidatePlayPage() {
      return (
        <div className="h-screen bg-[#F0F2F5] flex flex-col items-center justify-center p-6 text-center">
           <div className="w-12 h-12 border-4 border-primary-blue border-t-transparent rounded-full animate-spin mb-6" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#94A3B8]">Decrypting Signal...</p>
+          <p className="text-[15px] font-black uppercase tracking-[0.3em] text-[#94A3B8]">Decrypting Signal...</p>
        </div>
      );
   }
@@ -214,7 +214,7 @@ export default function CandidatePlayPage() {
          
          <div className="space-y-4">
             <h1 className="text-4xl font-black text-[#0F172A] tracking-tighter uppercase leading-none">{quiz.title}</h1>
-            <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.4em]">Ready for Synchronous Deployment</p>
+            <p className="text-[16.5px] font-black text-[#94A3B8] uppercase tracking-[0.4em]">Ready for Synchronous Deployment</p>
          </div>
 
          <AnimatePresence>
@@ -228,7 +228,7 @@ export default function CandidatePlayPage() {
                   <Clock className="text-primary-blue w-6 h-6 relative z-10" />
                </div>
                <div className="text-left">
-                  <p className="text-[10px] font-black text-primary-blue uppercase tracking-[0.3em] leading-none mb-1.5">Waiting Room Protocol</p>
+                  <p className="text-[15px] font-black text-primary-blue uppercase tracking-[0.3em] leading-none mb-1.5">Waiting Room Protocol</p>
                   <p className="text-sm font-black text-[#0F172A] uppercase tracking-tight">Waiting for admin to start the quiz</p>
                </div>
             </motion.div>
@@ -243,12 +243,12 @@ export default function CandidatePlayPage() {
          <div className="space-y-4">
             <Trophy className="text-amber-400 w-20 h-20 mx-auto" />
             <h1 className="text-4xl font-black tracking-tighter uppercase">Signal Terminated</h1>
-            <p className="text-[11px] font-black text-white/40 uppercase tracking-[0.4em]">Final Registry Score Synchronized</p>
+            <p className="text-[16.5px] font-black text-white/40 uppercase tracking-[0.4em]">Final Registry Score Synchronized</p>
          </div>
          <div className="text-6xl font-black tabular-nums">{score}</div>
          <button 
            onClick={() => router.push('/quiz/admin')}
-           className="px-12 py-5 bg-white text-[#0F172A] rounded-2xl font-black text-[10px] uppercase tracking-widest"
+           className="px-12 py-5 bg-white text-[#0F172A] rounded-2xl font-black text-[15px] uppercase tracking-widest"
          >
            Close Data Node
          </button>
@@ -273,7 +273,7 @@ export default function CandidatePlayPage() {
                 <Zap size={20} />
              </div>
              <div>
-                <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest leading-none mb-1">Session Active</p>
+                <p className="text-[13.5px] font-black text-[#94A3B8] uppercase tracking-widest leading-none mb-1">Session Active</p>
                 <p className="text-sm font-black text-[#0F172A] uppercase">Node Sync Point {quiz.current_question_index + 1}</p>
              </div>
           </div>
@@ -349,13 +349,13 @@ export default function CandidatePlayPage() {
                       <Clock className="text-primary-blue w-10 h-10 animate-spin-slow" />
                    </div>
                    <h2 className="text-3xl font-black text-[#0F172A] uppercase tracking-tighter mb-4">Read the Question</h2>
-                   <p className="text-[12px] font-black text-[#94A3B8] uppercase tracking-[0.4em] max-w-sm">Data Injection sequence initialized. Synchronize with the primary broadcast terminal for intelligence gathering.</p>
+                   <p className="text-[18px] font-black text-[#94A3B8] uppercase tracking-[0.4em] max-w-sm">Data Injection sequence initialized. Synchronize with the primary broadcast terminal for intelligence gathering.</p>
                 </div>
               ) : (
                 <div className="col-span-full bg-white rounded-[40px] border border-[#E2E8F0] border-dashed flex flex-col items-center justify-center p-12 text-center">
                    <MonitorOff className="text-[#94A3B8] w-16 h-16 mb-6 animate-pulse" />
                    <h2 className="text-2xl font-black text-[#0F172A] uppercase tracking-tighter">Waiting Terminal</h2>
-                   <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] mt-2">Analysis broadcast on main display terminal</p>
+                   <p className="text-[15px] font-black text-[#94A3B8] uppercase tracking-[0.3em] mt-2">Analysis broadcast on main display terminal</p>
                 </div>
               )}
            </AnimatePresence>
@@ -364,7 +364,7 @@ export default function CandidatePlayPage() {
        {/* Bottom Identity Node */}
        <div className="p-4 flex items-center justify-center gap-3">
           <div className="w-6 h-px bg-[#E2E8F0]" />
-          <span className="text-[9px] font-black text-[#94A3B8] uppercase tracking-[0.5em]">{user?.email || "CONNECTED_NODE"}</span>
+          <span className="text-[13.5px] font-black text-[#94A3B8] uppercase tracking-[0.5em]">{user?.email || "CONNECTED_NODE"}</span>
           <div className="w-6 h-px bg-[#E2E8F0]" />
        </div>
     </div>
