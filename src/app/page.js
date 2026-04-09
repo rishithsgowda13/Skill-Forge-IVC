@@ -63,7 +63,14 @@ export default function LoginPage() {
         return;
       }
 
-      const { error } = await supabase.auth.signUp({
+      // Institutional Domain Authority Check
+      if (!email.toLowerCase().endsWith("@vvce.ac.in")) {
+        setError("AUTHENTICATION FAILED: Only @vvce.ac.in credentials authorized.");
+        setLoading(false);
+        return;
+      }
+
+      const { data: authData, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -72,8 +79,28 @@ export default function LoginPage() {
         }
       });
 
-      if (error) { setError(error.message); setLoading(false); }
-      else { setError("Check your email for confirmation!"); setLoading(false); }
+      if (error) { 
+        // Handle Supabase "Signups not allowed" or other errors
+        if (error.message.includes("Signups not allowed")) {
+          setError("PROTOCOL ARCHIVE ERROR: System administrator has currently locked new node registrations. Contact authorized personnel.");
+        } else {
+          setError(error.message.toUpperCase()); 
+        }
+        setLoading(false); 
+      }
+      else if (authData.user) { 
+        // Sync to public profiles table for administrative oversight
+        await supabase.from('profiles').insert([{
+          id: authData.user.id,
+          full_name: fullName,
+          email: email,
+          role: userRole,
+          created_at: new Date().toISOString()
+        }]);
+
+        setError("SYNCHRONIZATION COMPLETE: Node established. You can now Sync Credentials to enter."); 
+        setLoading(false); 
+      }
     }
   };
 
