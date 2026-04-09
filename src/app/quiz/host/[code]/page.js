@@ -99,15 +99,36 @@ export default function AdminHostPage() {
   }, [code]);
 
   async function fetchLeaderboard(quizId) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("submissions")
-      .select("*, profiles!user_id(full_name)")
-      .eq("quiz_id", quizId)
-      .order("total_score", { ascending: false })
-      .order("submitted_at", { ascending: true })
-      .limit(10);
+      .select("user_id, total_score, profiles!user_id(full_name)")
+      .eq("quiz_id", quizId);
       
-    setLeaderboard(data || []);
+    if (error) {
+      console.error("LEADERBOARD SYNC ERROR:", error);
+      return;
+    }
+
+    // Aggregate scores by user ID
+    const totals = (data || []).reduce((acc, curr) => {
+      const uid = curr.user_id;
+      if (!acc[uid]) {
+        acc[uid] = { 
+          id: uid, 
+          full_name: curr.profiles?.full_name || "Challenger", 
+          total_score: 0 
+        };
+      }
+      acc[uid].total_score += curr.total_score || 0;
+      return acc;
+    }, {});
+
+    // Sort and limit to top 10
+    const sorted = Object.values(totals)
+      .sort((a, b) => b.total_score - a.total_score)
+      .slice(0, 10);
+      
+    setLeaderboard(sorted);
   }
 
   useEffect(() => {
@@ -173,6 +194,11 @@ export default function AdminHostPage() {
     await updateQuizStatus('showing-results');
   };
 
+  const handleTimerEnd = async () => {
+    await showResults();
+    if (quiz?.id) fetchLeaderboard(quiz.id);
+  };
+
   const startTimer = (seconds) => {
     clearInterval(timerRef.current);
     setTimer(seconds);
@@ -180,7 +206,7 @@ export default function AdminHostPage() {
       setTimer(prev => {
         if (prev <= 1) {
           clearInterval(timerRef.current);
-          showResults();
+          handleTimerEnd();
           return 0;
         }
         return prev - 1;
@@ -263,7 +289,7 @@ export default function AdminHostPage() {
                       <div className="flex justify-between items-center bg-white/5 border border-white/10 p-10 rounded-[48px] backdrop-blur-3xl overflow-hidden relative group">
                          <div className="relative z-10 space-y-4 max-w-[80%]">
                             <span className="text-primary-blue text-sm font-black uppercase tracking-[0.4em] mb-4 block">Question Analysis 0{quiz.current_question_index + 1}</span>
-                            <h2 className="text-6xl font-black leading-tight tracking-tight uppercase">{currentQuestion.question_text}</h2>
+                            <h2 className="text-6xl font-black leading-tight tracking-tight uppercase">{currentQuestion.content || currentQuestion.question_text}</h2>
                          </div>
                          <div className="relative z-10">
                             <div className="w-40 h-40 rounded-full border-8 border-primary-blue/20 flex flex-col items-center justify-center relative bg-[#0F172A] shadow-inner">
@@ -282,17 +308,17 @@ export default function AdminHostPage() {
                       {showOptions ? (
                         <div className="grid grid-cols-2 gap-8">
                            {currentQuestion.options?.map((opt, idx) => {
-                              const colors = ['bg-[#2563EB]', 'bg-[#EF4444]', 'bg-[#F59E0B]', 'bg-[#10B981]'];
-                              const labels = ['A', 'B', 'C', 'D'];
-                              return (
-                                 <div key={idx} className="flex items-center gap-6 p-8 bg-white/5 border border-white/10 rounded-[40px] transition-all group overflow-hidden relative">
-                                    <div className={`${colors[idx]} w-16 h-16 rounded-[24px] flex items-center justify-center font-black text-2xl shadow-xl relative z-10`}>
-                                       {labels[idx]}
-                                    </div>
-                                    <span className="text-2xl font-bold tracking-tight opacity-70 relative z-10">{opt}</span>
-                                    <div className={`absolute left-0 top-0 bottom-0 w-2 ${colors[idx]} opacity-40`} />
-                                 </div>
-                              )
+                               const colors = ['bg-[#2563EB]', 'bg-[#EF4444]', 'bg-[#F59E0B]', 'bg-[#10B981]'];
+                               const labels = ['A', 'B', 'C', 'D'];
+                               return (
+                                  <div key={idx} className="flex items-center gap-6 p-8 bg-white/5 border border-white/10 rounded-[40px] transition-all group overflow-hidden relative">
+                                     <div className={`${colors[idx]} w-16 h-16 rounded-[24px] flex items-center justify-center font-black text-2xl shadow-xl relative z-10`}>
+                                        {labels[idx]}
+                                     </div>
+                                     <span className="text-2xl font-bold tracking-tight opacity-70 relative z-10">{opt}</span>
+                                     <div className={`absolute left-0 top-0 bottom-0 w-2 ${colors[idx]} opacity-40`} />
+                                  </div>
+                               )
                            })}
                         </div>
                       ) : (
@@ -424,7 +450,7 @@ export default function AdminHostPage() {
                          </div>
                          <div className="flex flex-col">
                             <span className="text-sm font-black uppercase tracking-tight truncate max-w-[150px]">
-                              {player.profiles?.full_name || "Challenger"}
+                              {player.full_name}
                             </span>
                             <span className={`text-[9px] font-black uppercase opacity-40 ${index === 0 ? 'text-blue-200' : ''}`}>Node Authorized</span>
                          </div>
@@ -448,7 +474,7 @@ export default function AdminHostPage() {
               <div className="flex-1">
                  <p className="text-[10px] font-black text-primary-blue uppercase tracking-[0.3em] mb-1">Top Performer</p>
                  <h3 className="text-sm font-black text-[#0F172A] uppercase tracking-tight">
-                    {leaderboard[0]?.profiles?.full_name || "Searching..."}
+                    {leaderboard[0]?.full_name || "Searching..."}
                  </h3>
               </div>
            </div>

@@ -62,7 +62,7 @@ export default function CandidatePlayPage() {
         .channel(`quiz_session_${code.toUpperCase()}`)
         .on(
           'postgres_changes', 
-          { event: '*', schema: 'public', table: 'quizzes', filter: `access_code=eq.${code.toUpperCase()}` },
+          { event: '*', schema: 'public', table: 'quizzes', filter: `id=eq.${quizData.id}` },
           (payload) => {
             const updatedQuiz = payload.new;
             setQuiz(prev => ({ ...prev, ...updatedQuiz }));
