@@ -148,28 +148,28 @@ export default function QuizConfigurePage({ params }) {
   if (loading) return null;
 
   return (
-    <div className="p-6 md:p-14 space-y-10 flex flex-col min-h-full">
+    <div className="p-4 sm:p-8 md:p-14 space-y-6 md:space-y-10 flex flex-col min-h-full">
          {/* Breadcrumbs */}
          <button 
            onClick={() => router.push("/quiz/admin/quizzes")}
-           className="flex items-center gap-2 text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] hover:text-[#2563EB] transition-colors w-fit"
+           className="flex items-center gap-2 text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.3em] hover:text-[#2563EB] transition-colors w-fit"
          >
-            <ChevronLeft size={14} />
+            <ChevronLeft size={16} />
             <span>Back to Protocols</span>
          </button>
 
-         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-10 md:mb-16">
-              <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 md:gap-6 w-full lg:w-auto">
-                 <div className="flex items-center gap-3 bg-white px-6 md:px-8 py-3 md:py-4 rounded-[20px] md:rounded-[24px] border border-[#E2E8F0] shadow-sm w-full sm:w-auto">
+         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 md:gap-8 mb-6 md:mb-16">
+              <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 md:gap-6 w-full lg:w-auto">
+                 <div className="flex items-center gap-3 bg-white px-5 md:px-8 py-3 md:py-4 rounded-[16px] md:rounded-[24px] border border-[#E2E8F0] shadow-sm w-full sm:w-auto">
                     <Hash size={18} className="text-[#2563EB]" />
-                    <span className="text-[10px] md:text-sm font-black text-[#0F172A] uppercase tracking-widest leading-none">
+                    <span className="text-[11px] md:text-sm font-black text-[#0F172A] uppercase tracking-widest leading-none">
                        {questions.length} <span className="hidden xs:inline">Nodes Registered</span><span className="xs:hidden">Nodes</span>
                     </span>
                  </div>
                  
-                 <div className="flex items-center gap-3 bg-white px-6 md:px-8 py-3 md:py-4 rounded-[20px] md:rounded-[24px] border border-[#E2E8F0] shadow-sm w-full sm:w-auto">
+                 <div className="flex items-center gap-3 bg-white px-5 md:px-8 py-3 md:py-4 rounded-[16px] md:rounded-[24px] border border-[#E2E8F0] shadow-sm w-full sm:w-auto">
                     <Users size={18} className="text-emerald-500" />
-                    <span className="text-[10px] md:text-sm font-black text-[#0F172A] uppercase tracking-widest leading-none">
+                    <span className="text-[11px] md:text-sm font-black text-[#0F172A] uppercase tracking-widest leading-none">
                        {participantsCount} <span className="hidden xs:inline">Authorized Personnel</span><span className="xs:hidden">Users</span>
                     </span>
                  </div>
@@ -178,7 +178,7 @@ export default function QuizConfigurePage({ params }) {
                    <button 
                      onClick={() => handleDeleteQuestion(editingQuestionId)}
                      disabled={submitting}
-                     className="bg-red-500 text-white px-6 md:px-8 py-3 md:py-4 rounded-[20px] md:rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-red-200 hover:bg-red-600 active:scale-95 transition-all text-[10px] md:text-sm font-black uppercase tracking-widest disabled:opacity-50 w-full sm:w-auto"
+                     className="bg-red-500 text-white px-6 md:px-8 py-3 md:py-4 rounded-[16px] md:rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-red-200 hover:bg-red-600 active:scale-95 transition-all text-[11px] md:text-sm font-black uppercase tracking-widest disabled:opacity-50 w-full sm:w-auto"
                    >
                      <Trash2 size={18} />
                      <span>Delete <span className="hidden xs:inline">Node</span></span>
@@ -190,7 +190,7 @@ export default function QuizConfigurePage({ params }) {
                        setNewQuestion({ content: "", options: ["", "", "", ""], correct_answer: "A", time_limit: 30, points: 100 });
                        window.scrollTo({ top: 300, behavior: 'smooth' });
                      }}
-                     className="bg-[#2563EB] text-white px-6 md:px-8 py-3 md:py-4 rounded-[20px] md:rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-blue-200 hover:scale-[1.02] active:scale-95 transition-all text-[10px] md:text-sm font-black uppercase tracking-widest w-full sm:w-auto"
+                     className="bg-[#2563EB] text-white px-6 md:px-8 py-3 md:py-4 rounded-[16px] md:rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-blue-200 hover:scale-[1.02] active:scale-95 transition-all text-[11px] md:text-sm font-black uppercase tracking-widest w-full sm:w-auto"
                    >
                      <Plus size={18} strokeWidth={3} />
                      <span>Add <span className="hidden xs:inline">Node</span></span>
@@ -199,53 +199,53 @@ export default function QuizConfigurePage({ params }) {
               </div>
 
              <header className="text-left lg:text-right w-full lg:w-auto">
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#0F172A] tracking-tighter uppercase leading-none">
+                <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-[#0F172A] tracking-tighter uppercase leading-none">
                    Configure <span className="text-[#2563EB]">Intelligence</span>
                 </h1>
-                <p className="text-[9px] md:text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] mt-2">
+                <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] mt-2">
                    {quiz?.title || "PROTOCOL"} • Session Analysis
                 </p>
              </header>
           </div>
 
-         <div className="flex justify-center w-full px-4 md:px-8">
+         <div className="flex justify-center w-full">
             {/* Question Entry Form */}
-            <div className="w-full max-w-[1800px] space-y-12">
-               <div className="bg-white rounded-[40px] border border-[#E2E8F0] shadow-sm p-8 space-y-8">
+            <div className="w-full max-w-[1800px] space-y-8 md:space-y-12">
+               <div className="bg-white rounded-[24px] md:rounded-[40px] border border-[#E2E8F0] shadow-sm p-5 md:p-8 space-y-6 md:space-y-8">
                   <form onSubmit={handleAuthorizeNode} className="space-y-8">
-                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-16 items-stretch">
+                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 md:gap-16 items-stretch">
                         {/* Left Side: Question */}
                         <div className="flex flex-col h-full space-y-4">
-                           <label className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.4em] ml-6">Challenge Content Matrix</label>
+                           <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.4em] ml-2 md:ml-6">Challenge Content Matrix</label>
                            <textarea 
                              required
                              value={newQuestion.content}
                              onChange={(e) => setNewQuestion({...newQuestion, content: e.target.value})}
-                             placeholder="Enter the technical challenge or question protocol..."
-                             className="w-full bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-[32px] p-8 text-2xl font-black text-[#0F172A] focus:outline-none focus:border-[#2563EB] flex-1 resize-none"
+                             placeholder="Enter the technical challenge protocol..."
+                             className="w-full bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-[24px] md:rounded-[32px] p-6 md:p-8 text-lg md:text-2xl font-black text-[#0F172A] focus:outline-none focus:border-[#2563EB] flex-1 min-h-[160px] md:min-h-0 resize-none"
                            />
 
-                           <div className="flex flex-col gap-4 pt-2">
+                           <div className="flex flex-col gap-3 pt-2">
                               <button
                                 type="submit"
                                 disabled={submitting || !newQuestion.content || newQuestion.options.some(opt => !opt) || !newQuestion.time_limit || !newQuestion.points}
-                                className={`w-full py-6 rounded-[28px] font-black text-xl uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-4 group ${
+                                className={`w-full py-5 md:py-6 rounded-[20px] md:rounded-[28px] font-black text-lg md:text-xl uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-4 group ${
                                   (submitting || !newQuestion.content || newQuestion.options.some(opt => !opt) || !newQuestion.time_limit || !newQuestion.points)
                                     ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
                                     : "bg-[#0F172A] text-white hover:scale-[1.02] active:scale-95"
                                 }`}
                               >
                                  <span>{submitting ? "Authorizing..." : "Authorize Node"}</span>
-                                 <Zap className={`${(submitting || !newQuestion.content || newQuestion.options.some(opt => !opt) || !newQuestion.time_limit || !newQuestion.points) ? "text-slate-300" : "text-blue-500 fill-blue-500"} w-8 h-8 group-hover:animate-pulse`} />
+                                 <Zap className={`${(submitting || !newQuestion.content || newQuestion.options.some(opt => !opt) || !newQuestion.time_limit || !newQuestion.points) ? "text-slate-300" : "text-blue-500 fill-blue-500"} w-6 h-6 md:w-8 md:h-8 group-hover:animate-pulse`} />
                               </button>
 
                               <button
                                 type="button"
                                 onClick={() => router.push('/quiz/admin/quizzes')}
-                                className="w-full py-6 rounded-[28px] border-2 border-[#0F172A] font-black text-xs uppercase tracking-[0.4em] text-[#0F172A] hover:bg-slate-50 transition-all flex items-center justify-center gap-4 group"
+                                className="w-full py-5 md:py-6 rounded-[20px] md:rounded-[28px] border-2 border-[#0F172A] font-black text-[10px] md:text-xs uppercase tracking-[0.4em] text-[#0F172A] hover:bg-slate-50 transition-all flex items-center justify-center gap-4 group"
                               >
                                  <span>Finish Protocol</span>
-                                 <ArrowRight size={18} className="group-hover:translate-x-1 transition-all" />
+                                 <ArrowRight size={16} className="group-hover:translate-x-1 transition-all" />
                               </button>
                            </div>
                         </div>
