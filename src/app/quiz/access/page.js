@@ -51,8 +51,8 @@ export default function ProtocolAccessPage() {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        whileHover={{ scale: 1.02, transition: { duration: 0.4 } }}
-        className="w-full max-w-[480px] bg-white rounded-[40px] md:rounded-[56px] shadow-[0_60px_100px_-20px_rgba(37,99,235,0.12)] border border-[#f1f5f9] p-8 md:p-16 text-center space-y-10 md:space-y-16 relative overflow-hidden group"
+        whileHover={{ scale: 1.01, transition: { duration: 0.4 } }}
+        className="w-full max-w-[750px] bg-white rounded-[40px] md:rounded-[56px] shadow-[0_60px_100px_-20px_rgba(37,99,235,0.12)] border border-[#f1f5f9] p-8 md:p-16 md:px-24 text-center space-y-10 md:space-y-16 relative overflow-hidden group"
       >
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-blue-100/50 transition-colors" />
         <div className="space-y-4 md:space-y-6">
