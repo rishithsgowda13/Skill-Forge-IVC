@@ -27,6 +27,7 @@ export default function AdminHostPage() {
   const [quiz, setQuiz] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [joinCount, setJoinCount] = useState(0);
+  const [presentUsers, setPresentUsers] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [countdown, setCountdown] = useState(0);
@@ -84,9 +85,19 @@ export default function AdminHostPage() {
         )
         .on('presence', { event: 'sync' }, () => {
           const state = channel.presenceState();
-          // Count total tracking nodes across all keys
-          const count = Object.values(state).reduce((acc, curr) => acc + curr.length, 0);
+          const count = Object.keys(state).length;
           setJoinCount(count);
+
+          // Extract names from presence state
+          const users = [];
+          Object.values(state).forEach(presences => {
+            presences.forEach(p => {
+              if (p.full_name) {
+                users.push({ id: p.user_id, full_name: p.full_name });
+              }
+            });
+          });
+          setPresentUsers(users);
         })
         .subscribe();
 
@@ -123,10 +134,20 @@ export default function AdminHostPage() {
       return acc;
     }, {});
 
-    // Sort and limit to top 10
-    const sorted = Object.values(totals)
+    // Sort and limit to top 15 (larger window)
+    const scoredUsers = Object.values(totals);
+    
+    // Merge with present users who have no scores yet
+    const allUsers = [...scoredUsers];
+    presentUsers.forEach(pu => {
+      if (!allUsers.find(u => u.id === pu.id)) {
+        allUsers.push({ id: pu.id, full_name: pu.full_name, total_score: 0 });
+      }
+    });
+
+    const sorted = allUsers
       .sort((a, b) => b.total_score - a.total_score)
-      .slice(0, 10);
+      .slice(0, 15);
       
     setLeaderboard(sorted);
   }
@@ -261,6 +282,23 @@ export default function AdminHostPage() {
                         </div>
                         <h1 className="text-8xl font-black tracking-tighter uppercase leading-none">JOIN THE NODE</h1>
                         <p className="text-[11px] font-black text-white/40 uppercase tracking-[0.6em]">Scanning for synchronized candidate signals</p>
+                     </div>
+
+                     <div className="flex flex-wrap justify-center gap-3 px-20">
+                        {presentUsers.map((user, i) => (
+                          <motion.div
+                            key={user.id + i}
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-primary-blue/10 border border-primary-blue/20 px-6 py-3 rounded-2xl flex items-center gap-3"
+                          >
+                             <div className="w-1.5 h-1.5 rounded-full bg-primary-blue animate-pulse" />
+                             <span className="text-[10px] font-black text-primary-blue uppercase tracking-widest">{user.full_name}</span>
+                          </motion.div>
+                        ))}
+                        {presentUsers.length === 0 && (
+                          <div className="text-[10px] font-black text-white/10 uppercase tracking-[0.4em] animate-pulse">Waiting for neural handshake...</div>
+                        )}
                      </div>
 
                      <div className="bg-white text-[#0F172A] p-12 rounded-[56px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] flex flex-col gap-4">

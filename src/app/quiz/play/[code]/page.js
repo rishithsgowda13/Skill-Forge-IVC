@@ -57,6 +57,14 @@ export default function CandidatePlayPage() {
       setQuiz(quizData);
       setLoading(false);
 
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', sessionUser.id)
+        .single();
+      
+      const sessionName = profile?.full_name || sessionUser.email?.split('@')[0] || "Challenger";
+
       // Subscribe to changes and presence
       const channel = supabase
         .channel(`quiz_session_${code.toUpperCase()}`)
@@ -74,6 +82,7 @@ export default function CandidatePlayPage() {
           if (status === 'SUBSCRIBED') {
             await channel.track({
               user_id: sessionUser.id,
+              full_name: sessionName,
               online_at: new Date().toISOString(),
             });
           }
