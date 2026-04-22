@@ -87,19 +87,19 @@ export default function Sidebar() {
       onMouseLeave={() => setIsExpanded(false)}
       initial={false}
       animate={{ 
-        width: isExpanded ? 240 : 72
+        width: isExpanded ? 220 : 64
       }}
       transition={{ type: "spring", stiffness: 400, damping: 35 }}
       className="fixed left-0 top-0 bottom-0 bg-white border-r border-[#F1F5F9] hidden lg:flex flex-col z-[65] overflow-hidden"
     >
         {/* Logo Section */}
-        <div className="h-24 flex items-center px-4 relative z-10">
-           <div className="flex items-center gap-3.5 min-w-[200px]">
+        <div className="h-20 flex items-center px-4 relative z-10">
+           <div className="flex items-center gap-3 min-w-[180px]">
               <motion.div 
                 whileHover={{ scale: 1.05 }}
-                className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-100 flex-shrink-0"
+                className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-100 flex-shrink-0"
               >
-                <ShieldCheck className="w-6 h-6 text-white" />
+                <ShieldCheck className="w-5 h-5 text-white" />
               </motion.div>
               <AnimatePresence>
                 {isExpanded && (
@@ -109,7 +109,7 @@ export default function Sidebar() {
                     exit={{ opacity: 0, x: -10 }}
                     transition={{ delay: 0.1 }}
                   >
-                    <span className="font-[900] text-2xl text-[#0F172A] tracking-tight block leading-none">Skill Forge</span>
+                    <span className="font-[900] text-xl text-[#0F172A] tracking-tight block leading-none">Skill Forge</span>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -124,10 +124,10 @@ export default function Sidebar() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-[#F8FAFC] rounded-full px-5 py-3 flex items-center gap-2.5 border border-[#F1F5F9] transition-all w-fit whitespace-nowrap"
+                className="bg-[#F8FAFC] rounded-full px-4 py-2 flex items-center gap-2 border border-[#F1F5F9] transition-all w-fit whitespace-nowrap"
               >
-                  <div className="w-1 h-1 rounded-full bg-[#94A3B8]" />
-                  <span className="text-[8px] font-black uppercase tracking-[0.2em] text-[#94A3B8] leading-none">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="text-[7.5px] font-black uppercase tracking-[0.2em] text-[#94A3B8] leading-none">
                     {isAdmin ? "Evaluator Node" : "Candidate Station"}
                   </span>
               </motion.div>
@@ -154,15 +154,15 @@ export default function Sidebar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center transition-all rounded-full mx-1.5 group relative overflow-hidden h-[46px] ${
+                className={`flex items-center transition-all rounded-xl mx-2 group relative overflow-hidden h-[40px] border ${
                   isActive 
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-100" 
-                    : "text-[#94A3B8] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
+                    ? "bg-blue-600 text-white border-blue-500 shadow-[0_6px_15px_-4px_rgba(37,99,235,0.4)]" 
+                    : "text-[#64748B] bg-transparent border-transparent hover:bg-slate-50 hover:border-slate-100 hover:text-[#0F172A]"
                 }`}
-                style={{ width: isExpanded ? '228px' : '60px' }}
+                style={{ width: isExpanded ? '204px' : '48px' }}
               >
-                <div className={`flex items-center gap-5 px-0 w-full ${isExpanded ? "pl-5" : "justify-center"}`}>
-                  <item.icon size={18} className={`${isActive ? "text-white" : "text-[#94A3B8] group-hover:text-blue-600"} transition-all duration-300 flex-shrink-0`} />
+                <div className={`flex items-center gap-3 px-0 w-full ${isExpanded ? "pl-3.5" : "justify-center"}`}>
+                  <item.icon size={15} className={`${isActive ? "text-white" : "text-[#94A3B8] group-hover:text-blue-600"} transition-all duration-300 flex-shrink-0`} />
                   <AnimatePresence>
                     {isExpanded && (
                       <motion.span 
@@ -170,7 +170,7 @@ export default function Sidebar() {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -10 }}
                         transition={{ duration: 0.2 }}
-                        className="text-[10px] font-extrabold uppercase tracking-[0.2em] whitespace-nowrap"
+                        className="text-[9px] font-black uppercase tracking-[0.12em] whitespace-nowrap pt-[0.5px]"
                       >
                         {item.label}
                       </motion.span>
@@ -180,7 +180,7 @@ export default function Sidebar() {
                   {isActive && isExpanded && (
                     <motion.div 
                       layoutId="active-indicator" 
-                      className="ml-auto mr-5 w-1.2 h-1.2 bg-white rounded-full flex-shrink-0" 
+                      className="ml-auto mr-4 w-1.5 h-1.5 bg-white/40 rounded-full flex-shrink-0" 
                     />
                   )}
                 </div>
@@ -189,32 +189,46 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* Footer/Logout */}
-        <div className="p-4 border-t border-[#F1F5F9] relative z-10 overflow-hidden mt-auto">
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center px-2 py-3 rounded-full transition-all group min-w-[240px]"
-          >
-             <div className="w-10 h-10 bg-[#334155] rounded-full flex items-center justify-center text-white font-black text-xs flex-shrink-0 shadow-lg relative group-hover:scale-110 transition-transform uppercase">
-                <span>{userName?.[0] || role?.[0] || "N"}</span>
-                <div className="absolute -right-0.5 -bottom-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-sm">
-                   <LogOut size={10} className="text-rose-500" />
-                </div>
-             </div>
-             
-             <AnimatePresence>
-               {isExpanded && (
-                 <motion.span
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                    className="ml-4 text-[9px] font-black text-rose-500 uppercase tracking-[0.2em] whitespace-nowrap"
-                 >
-                   Terminate Sync
-                 </motion.span>
-               )}
-             </AnimatePresence>
-          </button>
+        <div className="p-3 border-t border-[#F1F5F9] relative z-10 mt-auto bg-white">
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard/profile"
+              className="flex-1 flex items-center p-2 rounded-2xl transition-all bg-[#F8FAFC] border border-[#F1F5F9] group cursor-pointer hover:border-blue-200 hover:bg-blue-50/30 overflow-hidden"
+            >
+               <div className="w-9 h-9 bg-[#0F172A] rounded-xl flex items-center justify-center text-white font-black text-[11px] flex-shrink-0 shadow-lg relative group-hover:scale-105 transition-transform uppercase border-2 border-white">
+                  <span>{userName?.[0] || role?.[0] || "N"}</span>
+                  <div className="absolute -right-1 -top-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white shadow-sm" />
+               </div>
+               
+               <AnimatePresence>
+                 {isExpanded && (
+                   <motion.div
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      className="ml-3 flex flex-col min-w-0"
+                   >
+                      <span className="text-[10px] font-black text-[#0F172A] uppercase tracking-tight truncate leading-none mb-1">
+                        {userName || "Protocol Entity"}
+                      </span>
+                      <span className="text-[8px] font-bold text-[#94A3B8] uppercase tracking-widest truncate leading-none">
+                        {role === "admin" ? "Master Evaluator" : "Authorized Node"}
+                      </span>
+                   </motion.div>
+                 )}
+               </AnimatePresence>
+            </Link>
+            
+            {isExpanded && (
+               <button 
+                 onClick={handleLogout}
+                 title="Terminate Session"
+                 className="p-2.5 text-[#94A3B8] hover:text-rose-500 transition-colors rounded-xl hover:bg-rose-50 bg-slate-50 border border-[#F1F5F9]"
+               >
+                 <LogOut size={16} />
+               </button>
+            )}
+          </div>
         </div>
       </motion.aside>
     );
