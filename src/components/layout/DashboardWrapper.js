@@ -12,7 +12,7 @@ export default function DashboardWrapper({ children, className = "" }) {
       <Sidebar />
       <motion.main 
         animate={{ 
-          marginLeft: isExpanded ? "240px" : "72px" 
+          marginLeft: isExpanded ? "220px" : "64px" 
         }}
         transition={{ type: "spring", stiffness: 400, damping: 35 }}
         className={`flex-1 min-h-screen w-full transition-all ${className}`}
