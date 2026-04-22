@@ -16,7 +16,8 @@ import {
   PlayCircle,
   BarChart2,
   Medal,
-  Award
+  Award,
+  ArrowLeft
 } from "lucide-react";
 
 export default function AdminHostPage() {
@@ -36,6 +37,7 @@ export default function AdminHostPage() {
   const [loading, setLoading] = useState(true);
   const [timer, setTimer] = useState(0);
   const [showOptions, setShowOptions] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -243,6 +245,27 @@ export default function AdminHostPage() {
     await updateQuizStatus('lobby', 0);
   };
 
+  const recalibrateNode = async () => {
+    if (!quiz?.id) return;
+    setRefreshing(true);
+    
+    // Re-fetch quiz data
+    const { data: quizData } = await supabase
+      .from("quizzes")
+      .select("*, questions(*)")
+      .eq("access_code", code.toUpperCase())
+      .single();
+    
+    if (quizData) {
+      setQuiz(quizData);
+      quizRef.current = quizData;
+      // Refresh leaderboard & presence nodes
+      await fetchLeaderboard(quizData.id);
+    }
+    
+    setTimeout(() => setRefreshing(false), 1000);
+  };
+
   const startQuiz = async () => {
     if (!quiz?.id) return;
     // Clear any existing scores/submissions for a fresh start
@@ -306,9 +329,16 @@ export default function AdminHostPage() {
        </div>
 
        {/* Main Display (TV AREA) */}
-       <div className="flex-1 flex flex-col p-6 md:p-12 relative overflow-y-auto lg:overflow-hidden z-10">
+       <div className="flex-1 flex flex-col p-6 md:p-12 relative overflow-hidden z-10">
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 w-full">
              <div className="flex items-center gap-5">
+                <button 
+                  onClick={() => router.push('/quiz/admin')}
+                  className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all group mr-2"
+                  title="Exit to Command Center"
+                >
+                  <ArrowLeft className="w-5 h-5 text-white/60 group-hover:text-white transition-colors" />
+                </button>
                 <div className="p-4 bg-white/5 rounded-[22px] border border-white/10 backdrop-blur-xl shadow-2xl">
                    <Zap className="text-primary-blue w-7 h-7 fill-primary-blue/20" />
                 </div>
@@ -357,19 +387,7 @@ export default function AdminHostPage() {
                      </div>
 
                      <div className="flex flex-wrap justify-center gap-2.5 w-full min-h-[100px] content-center">
-                        <AnimatePresence>
-                           {presentUsers.map((user, i) => (
-                             <motion.div
-                               key={user.id}
-                               initial={{ scale: 0.8, opacity: 0 }}
-                               animate={{ scale: 1, opacity: 1 }}
-                               className="bg-white/5 border border-white/5 px-5 py-3 rounded-[18px] flex items-center gap-2.5 backdrop-blur-sm"
-                             >
-                                <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                <span className="text-[11px] font-black text-white/70 uppercase tracking-widest">{user.full_name}</span>
-                             </motion.div>
-                           ))}
-                        </AnimatePresence>
+                        {/* Node individual chips removed per request */}
                         {presentUsers.length === 0 && (
                           <div className="flex flex-col items-center gap-3 opacity-10">
                              <div className="w-10 h-0.5 bg-white/20 rounded-full overflow-hidden">
@@ -624,11 +642,12 @@ export default function AdminHostPage() {
 
             <div className="mt-8">
                 <button 
-                  onClick={resetQuiz}
-                  className="w-full py-3 bg-white/5 lg:bg-slate-50 border border-white/5 lg:border-slate-100 rounded-[20px] text-[8px] font-black uppercase tracking-[0.4em] text-white/30 lg:text-slate-400 hover:text-primary-blue lg:hover:text-primary-blue hover:bg-white/10 lg:hover:bg-blue-50 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                  onClick={recalibrateNode}
+                  disabled={refreshing}
+                  className="w-full py-3 bg-white/5 lg:bg-slate-50 border border-white/5 lg:border-slate-100 rounded-[20px] text-[8px] font-black uppercase tracking-[0.4em] text-white/30 lg:text-slate-400 hover:text-primary-blue lg:hover:text-primary-blue hover:bg-white/10 lg:hover:bg-blue-50 transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50"
                 >
-                  <Zap size={10} className="fill-current" />
-                  <span>Recalibrate Neural Node</span>
+                  <Zap size={10} className={`fill-current ${refreshing ? "animate-bounce" : ""}`} />
+                  <span>{refreshing ? "Synchronizing Matrix..." : "Recalibrate Neural Node"}</span>
                 </button>
            </div>
         </div>
