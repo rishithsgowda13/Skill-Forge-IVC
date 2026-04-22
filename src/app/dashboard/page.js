@@ -98,10 +98,13 @@ export default function DashboardPage() {
 
     loadData();
 
-    // Subscribe to submission changes
+    // Subscribe to submission and profile changes globally
     const channel = supabase
-      .channel("global-leaderboard")
+      .channel("global-sync")
       .on("postgres_changes", { event: "*", schema: "public", table: "submissions" }, () => {
+        loadData();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
         loadData();
       })
       .subscribe();
@@ -160,10 +163,10 @@ export default function DashboardPage() {
 
   if (selectedSession) {
     return (
-      <div className="flex flex-col p-10 md:p-14 space-y-12">
+      <div className="flex flex-col p-6 md:p-8 space-y-8">
            <button 
              onClick={() => setSelectedSession(null)}
-             className="flex items-center gap-3 px-6 py-3 bg-white border border-[#E2E8F0] shadow-sm rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#64748B] hover:text-[#0F172A] hover:bg-gray-50 transition-all group"
+             className="flex items-center gap-2.5 px-5 py-2.5 bg-white border border-[#E2E8F0] shadow-sm rounded-xl text-[9px] font-black uppercase tracking-widest text-[#64748B] hover:text-[#0F172A] hover:bg-gray-50 transition-all group"
            >
               <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
               <span>Back to Control Center</span>
@@ -171,78 +174,78 @@ export default function DashboardPage() {
 
            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div className="space-y-2">
-                 <h2 className="text-5xl font-black text-[#0F172A] tracking-tighter uppercase leading-none">
+                 <h2 className="text-3xl font-black text-[#0F172A] tracking-tighter uppercase leading-none">
                    Session <span className="text-[#2563EB]">Analysis</span>
                  </h2>
-                 <p className="text-[12px] font-black text-[#94A3B8] uppercase tracking-[0.4em]">
+                 <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em]">
                    {selectedSession.quizzes?.title || "PROTOCOL_ID_UNDEFINED"}
                  </p>
               </div>
-              <div className="flex gap-4">
-                 <div className="bg-[#0F172A] text-white px-8 py-4 rounded-2xl flex flex-col items-center">
+              <div className="flex gap-3">
+                 <div className="bg-[#0F172A] text-white px-6 py-3 rounded-xl flex flex-col items-center">
                     <span className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Time Sync</span>
                     <span className="text-xl font-black">{selectedSession.time_taken || "24:12"}s</span>
                  </div>
-                 <div className="bg-white border border-[#E2E8F0] px-8 py-4 rounded-2xl flex flex-col items-center shadow-sm">
+                 <div className="bg-white border border-[#E2E8F0] px-6 py-3 rounded-xl flex flex-col items-center shadow-sm">
                     <span className="text-[9px] font-black uppercase tracking-widest text-[#94A3B8] mb-1">Total Score</span>
-                    <span className="text-xl font-black text-[#2563EB]">{selectedSession.total_score}</span>
+                    <span className="text-lg font-black text-[#2563EB]">{selectedSession.total_score}</span>
                  </div>
               </div>
            </div>
 
            {/* Stats Cards */}
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-white p-10 rounded-[12px] border border-[#E2E8F0] shadow-sm space-y-6">
-                 <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-[#2563EB]">
-                    <BarChart size={24} />
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white p-6 md:p-8 rounded-[12px] border border-[#E2E8F0] shadow-sm space-y-4">
+                 <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-[#2563EB]">
+                    <BarChart size={20} />
                  </div>
                  <div>
-                    <h4 className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-2 leading-none">Intelligence Accuracy</h4>
-                    <p className="text-4xl font-black text-[#0F172A]">
+                    <h4 className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-1 leading-none">Intelligence Accuracy</h4>
+                    <p className="text-3xl font-black text-[#0F172A]">
                       {((selectedSession.total_score / (selectedSession.quizzes?.total_questions || 10)) * 10).toFixed(0)}%
                     </p>
-                    <div className="mt-4 h-1.5 bg-gray-50 rounded-full overflow-hidden">
+                    <div className="mt-3 h-1 bg-gray-50 rounded-full overflow-hidden">
                        <motion.div initial={{ width: 0 }} animate={{ width: `${(selectedSession.total_score / (selectedSession.quizzes?.total_questions || 10)) * 100}%` }} className="h-full bg-[#2563EB]" />
                     </div>
                  </div>
               </div>
 
-              <div className="bg-white p-10 rounded-[12px] border border-[#E2E8F0] shadow-sm space-y-6">
-                 <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500">
-                    <BookText size={24} />
+              <div className="bg-white p-6 md:p-8 rounded-[12px] border border-[#E2E8F0] shadow-sm space-y-4">
+                 <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500">
+                    <BookText size={20} />
                  </div>
                  <div>
-                    <h4 className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-2 leading-none">Data Points Resolved</h4>
-                    <p className="text-4xl font-black text-[#0F172A]">
-                      {selectedSession.total_score} <span className="text-xl text-[#94A3B8]">/ {selectedSession.quizzes?.total_questions || 10}</span>
+                    <h4 className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-1 leading-none">Data Points Resolved</h4>
+                    <p className="text-3xl font-black text-[#0F172A]">
+                      {selectedSession.total_score} <span className="text-lg text-[#94A3B8]">/ {selectedSession.quizzes?.total_questions || 10}</span>
                     </p>
-                    <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-2">{selectedSession.flagged ? "ANOMALY DETECTED" : "INTEGRITY VERIFIED"}</p>
+                    <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-1.5">{selectedSession.flagged ? "ANOMALY DETECTED" : "INTEGRITY VERIFIED"}</p>
                  </div>
               </div>
 
-              <div className="bg-[#0F172A] p-10 rounded-[12px] shadow-2xl text-white space-y-6 overflow-hidden relative">
-                 <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                    <Trophy size={24} className="text-amber-400" />
+              <div className="bg-[#0F172A] p-6 md:p-8 rounded-[12px] shadow-2xl text-white space-y-4 overflow-hidden relative">
+                 <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                    <Trophy size={20} className="text-amber-400" />
                  </div>
                  <div className="relative z-10">
-                    <h4 className="text-[11px] font-black text-white/40 uppercase tracking-[0.2em] mb-2 leading-none">Session Rank</h4>
-                    <p className="text-4xl font-black">TOP 42%</p>
-                    <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mt-4">ELITE CANDIDATE BRACKET</p>
+                    <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-1 leading-none">Session Rank</h4>
+                    <p className="text-3xl font-black">TOP 42%</p>
+                    <p className="text-[9px] font-black text-white/60 uppercase tracking-widest mt-3">ELITE CANDIDATE BRACKET</p>
                  </div>
-                 <Shield size={120} className="absolute -bottom-8 -right-8 text-white/5" />
+                 <Shield size={100} className="absolute -bottom-6 -right-6 text-white/5" />
               </div>
            </div>
 
            {/* Protocol Leaderboard */}
-           <div className="bg-white rounded-[12px] border border-[#E2E8F0] shadow-sm p-10 md:p-14">
-              <div className="flex items-center justify-between mb-12">
+           <div className="bg-white rounded-[12px] border border-[#E2E8F0] shadow-sm p-8 md:p-10">
+              <div className="flex items-center justify-between mb-8">
                  <div className="flex items-center gap-4">
                     <div className="p-3 bg-amber-50 rounded-2xl">
                        <Medal size={24} className="text-amber-500" />
                     </div>
-                    <div>
-                       <h3 className="text-2xl font-black uppercase tracking-tighter text-[#0F172A]">Protocol Leaderboard</h3>
-                       <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest">Global Session Rankings</p>
+                     <div>
+                       <h3 className="text-xl font-black uppercase tracking-tighter text-[#0F172A]">Protocol Leaderboard</h3>
+                       <p className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-widest">Global Session Rankings</p>
                     </div>
                  </div>
               </div>
@@ -298,13 +301,13 @@ export default function DashboardPage() {
   if (!isMounted) return null;
 
   return (
-    <div className="flex flex-col p-8 md:p-14 space-y-12">
-      <header className="flex justify-between items-start mb-12 w-full">
+    <div className="flex flex-col p-6 md:p-10 space-y-8">
+      <header className="flex justify-between items-start mb-8 w-full">
         <div className="space-y-1">
-          <h2 className="text-5xl font-black text-[#0F172A] tracking-tighter uppercase leading-none">
+          <h2 className="text-3xl md:text-4xl font-black text-[#0F172A] tracking-tighter uppercase leading-none">
             CONTROL <span className="text-[#2563EB]">CENTER</span>
           </h2>
-          <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.4em]">
+          <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em]">
             Authorized Station Analysis Protocol
           </p>
         </div>
@@ -312,7 +315,7 @@ export default function DashboardPage() {
         {(role === "admin" || role === "evaluator") && (
           <button 
             onClick={() => router.push('/quiz')}
-            className="bg-[#2563EB] text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-4 shadow-[0_15px_40px_rgba(37,99,235,0.3)] hover:bg-[#1E40AF] transition-all active:scale-[0.98] group"
+            className="bg-[#2563EB] text-white px-6 py-3 rounded-xl font-black text-[10px] tracking-widest uppercase flex items-center gap-3 shadow-[0_12px_35px_rgba(37,99,235,0.25)] hover:bg-[#1E40AF] transition-all active:scale-[0.98] group"
           >
             <Zap size={20} className="group-hover:translate-x-1.5 transition-transform" />
             <span>Initialize Session</span>
@@ -320,27 +323,27 @@ export default function DashboardPage() {
         )}
       </header>
 
-        <section className="space-y-12">
+        <section className="space-y-8">
           {/* Core Telemetry Grid - Primary Display */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <div className="flex flex-wrap gap-4 md:gap-6">
             {stats.map((stat, idx) => (
               <motion.div
                 key={stat.title}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1 }}
-                className="bg-white rounded-[32px] p-8 border border-[#E2E8F0] shadow-sm hover:border-[#2563EB]/20 transition-all group overflow-hidden relative"
+                className="bg-white rounded-[20px] p-3.5 md:p-5 border border-[#E2E8F0] shadow-sm hover:border-[#2563EB]/20 transition-all group overflow-hidden relative min-w-[160px] flex-1 lg:flex-none lg:w-[calc(25%-1.25rem)]"
               >
-                <div className="relative z-10 space-y-4">
-                  <div className={`p-3 w-fit rounded-xl bg-[#F8FAFC] ${stat.color}`}>
-                    <stat.icon size={22} strokeWidth={2.5} />
+                <div className="relative z-10 space-y-3">
+                  <div className={`p-2.5 w-fit rounded-lg bg-[#F8FAFC] ${stat.color}`}>
+                    <stat.icon size={18} strokeWidth={2.5} />
                   </div>
                   <div>
-                    <p className="text-3xl font-black text-[#0F172A] mb-1">{stat.value}</p>
-                    <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest leading-none">{stat.title}</p>
+                    <p className="text-xl font-black text-[#0F172A] mb-0.5">{stat.value}</p>
+                    <p className="text-[7.5px] font-black text-[#94A3B8] uppercase tracking-widest leading-none">{stat.title}</p>
                   </div>
                 </div>
-                <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-[40px] opacity-[0.03] -mr-8 -mt-8 ${stat.color.replace('text-', 'bg-')}`} />
+                <div className={`absolute top-0 right-0 w-20 h-20 rounded-full blur-[35px] opacity-[0.03] -mr-6 -mt-6 ${stat.color.replace('text-', 'bg-')}`} />
               </motion.div>
             ))}
           </div>
@@ -352,17 +355,17 @@ export default function DashboardPage() {
                    <div className="p-3 bg-amber-50 rounded-2xl">
                       <Trophy size={24} className="text-amber-500" />
                    </div>
-                   <div>
-                      <h3 className="text-xl font-black uppercase tracking-tight text-[#0F172A]">Hall of Fame</h3>
-                      <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest">Global Elite Node Benchmarks</p>
-                   </div>
+                    <div>
+                       <h3 className="text-lg font-black uppercase tracking-tight text-[#0F172A]">Hall of Fame</h3>
+                       <p className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-widest">Global Elite Node Benchmarks</p>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-6">
                    <div className="relative">
-                      <button 
+                       <button 
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className="bg-white border border-[#E2E8F0] rounded-2xl px-6 py-3 min-w-[220px] flex items-center justify-between gap-4 text-[10px] font-black uppercase tracking-widest text-[#0F172A] hover:border-[#2563EB] transition-all shadow-sm hover:shadow-md group"
+                        className="bg-white border border-[#E2E8F0] rounded-xl px-5 py-2.5 min-w-[180px] flex items-center justify-between gap-3 text-[9px] font-black uppercase tracking-widest text-[#0F172A] hover:border-[#2563EB] transition-all shadow-sm hover:shadow-md group"
                       >
                          <span className="truncate">{selectedQuizId === "all" ? "Global Protocols" : attendedQuizzes.find(q => q.id === selectedQuizId)?.title}</span>
                          <ChevronDown size={14} className={`text-[#94A3B8] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`} />
@@ -438,7 +441,7 @@ export default function DashboardPage() {
                                  <img src={u.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.user_id}`} alt="" className="w-full h-full object-cover" />
                               </div>
                               <div>
-                                 <p className="text-sm font-extrabold text-[#0F172A] uppercase tracking-tight group-hover:text-blue-600 transition-colors leading-none">{u.profiles?.full_name || "Unknown Candidate"}</p>
+                               <p className="text-[13px] font-extrabold text-[#0F172A] uppercase tracking-tight group-hover:text-blue-600 transition-colors leading-none">{u.profiles?.full_name || "Unknown Candidate"}</p>
                                  <div className="flex items-center gap-2 mt-1.5 opacity-60">
                                     <Activity size={10} className="text-blue-500" />
                                     <span className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest leading-none">Qualified Participant</span>
@@ -453,7 +456,7 @@ export default function DashboardPage() {
                            </div>
                            <div>
                               <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest leading-none mb-1">Score</p>
-                              <p className="text-xl font-black text-blue-600">{u.total_score}</p>
+                               <p className="text-lg font-black text-blue-600">{u.total_score}</p>
                            </div>
                         </div>
                      </div>
