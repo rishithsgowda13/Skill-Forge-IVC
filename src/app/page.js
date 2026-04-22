@@ -33,6 +33,15 @@ export default function LoginPage() {
   useEffect(() => {
     setIsMounted(true);
     setError(null);
+    
+    // Global Scroll Lockdown
+    document.documentElement.classList.add("no-scroll");
+    document.body.classList.add("no-scroll");
+    
+    return () => {
+      document.documentElement.classList.remove("no-scroll");
+      document.body.classList.remove("no-scroll");
+    };
   }, [isSignUp]);
 
   const handleAuth = async (e) => {
@@ -113,7 +122,7 @@ export default function LoginPage() {
   if (!isMounted) return null;
 
   return (
-    <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-4 md:p-8 font-sans selection:bg-blue-100 overflow-hidden relative">
+    <div className="fixed inset-0 w-full h-full bg-[#f8fafc] flex items-center justify-center p-4 md:p-8 font-sans selection:bg-blue-100 overflow-hidden overscroll-none relative">
       {/* Background Ambience */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-blue-500/5 rounded-full blur-[120px] animate-pulse" />
