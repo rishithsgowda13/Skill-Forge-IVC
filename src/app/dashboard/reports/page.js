@@ -32,6 +32,7 @@ export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [showPasteWarning, setShowPasteWarning] = useState(false);
+  const [pasteErrorMessage, setPasteErrorMessage] = useState("");
 
   const supabase = createClient();
   const router = useRouter();
@@ -114,10 +115,27 @@ export default function ReportsPage() {
     }, 1500);
   };
 
-  const handlePaste = (e) => {
+  const handlePaste = (e, setter, currentValue) => {
     e.preventDefault();
-    setShowPasteWarning(true);
-    setTimeout(() => setShowPasteWarning(false), 3000);
+    const pastedData = e.clipboardData.getData("text");
+    
+    if (pastedData.length > 100) {
+      setPasteErrorMessage("PROTOCOL BREACH: Paste exceeds 100 character limit.");
+      setShowPasteWarning(true);
+      setTimeout(() => setShowPasteWarning(false), 3000);
+      return;
+    }
+
+    // Filter for plain text only (strip any non-textual data if necessary, though clipboard text is usually safe)
+    const cleanText = pastedData.replace(/[^\x20-\x7E\s]/g, ''); 
+    
+    // Manual insertion to ensure we control the state update precisely
+    const target = e.target;
+    const start = target.selectionStart;
+    const end = target.selectionEnd;
+    const newValue = currentValue.substring(0, start) + cleanText + currentValue.substring(end);
+    
+    setter(newValue);
   };
 
   const isAdmin = role === "admin";
@@ -325,7 +343,8 @@ export default function ReportsPage() {
                 <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] ml-4">Overview</label>
                 <textarea
                   value={overview}
-                  onPaste={handlePaste}
+                  value={overview}
+                  onPaste={(e) => handlePaste(e, setOverview, overview)}
                   onChange={(e) => setOverview(e.target.value)}
                   placeholder="Provide a brief overview of your findings..."
                   className="w-full min-h-[120px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-[12px] p-6 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-[#94A3B8] resize-none"
@@ -336,7 +355,8 @@ export default function ReportsPage() {
                 <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] ml-4">Applications in Real World</label>
                 <textarea
                   value={applications}
-                  onPaste={handlePaste}
+                  value={applications}
+                  onPaste={(e) => handlePaste(e, setApplications, applications)}
                   onChange={(e) => setApplications(e.target.value)}
                   placeholder="How can this be applied in real-world scenarios..."
                   className="w-full min-h-[100px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-[12px] p-6 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-[#94A3B8] resize-none"
@@ -348,7 +368,8 @@ export default function ReportsPage() {
                   <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] ml-4">Your thoughts</label>
                   <textarea
                     value={thoughts}
-                    onPaste={handlePaste}
+                    value={thoughts}
+                    onPaste={(e) => handlePaste(e, setThoughts, thoughts)}
                     onChange={(e) => setThoughts(e.target.value)}
                     placeholder="Share your personal analysis..."
                     className="w-full min-h-[100px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-[12px] p-6 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-[#94A3B8] resize-none"
@@ -358,7 +379,8 @@ export default function ReportsPage() {
                   <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] ml-4">Future improvements</label>
                   <textarea
                     value={improvements}
-                    onPaste={handlePaste}
+                    value={improvements}
+                    onPaste={(e) => handlePaste(e, setImprovements, improvements)}
                     onChange={(e) => setImprovements(e.target.value)}
                     placeholder="Suggest enhancements for the protocol..."
                     className="w-full min-h-[100px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-[12px] p-6 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-[#94A3B8] resize-none"
@@ -503,11 +525,11 @@ export default function ReportsPage() {
                    <div className="w-10 h-10 bg-amber-50 rounded-2xl flex items-center justify-center">
                       <AlertCircle className="text-amber-500 w-5 h-5" />
                    </div>
-                   <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-[#0F172A]">Security Protocol</span>
-                      <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-tighter">Paste option is disabled for this</span>
-                   </div>
-                </motion.div>
+                    <div className="flex flex-col">
+                       <span className="text-[10px] font-black uppercase tracking-widest text-[#0F172A]">Security Protocol</span>
+                       <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-tighter">{pasteErrorMessage}</span>
+                    </div>
+                 </motion.div>
               )}
             </AnimatePresence>
           </div>
