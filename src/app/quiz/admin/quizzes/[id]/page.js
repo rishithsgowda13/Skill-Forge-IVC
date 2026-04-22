@@ -18,7 +18,8 @@ import {
   ArrowRight,
   Clock,
   Users,
-  Lock
+  Lock,
+  FileUp
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -88,6 +89,67 @@ export default function QuizConfigurePage({ params }) {
     } else {
       toast.error("UPDATE FAILED: " + error.message);
     }
+  };
+
+  const handleCSVUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target.result;
+        const lines = text.split(/\r?\n/).filter(line => line.trim());
+        
+        if (lines.length === 0) throw new Error("File is empty.");
+
+        // Skip header if it exists (check if first line contains "question")
+        const startIdx = lines[0].toLowerCase().includes("question") ? 1 : 0;
+        
+        const newQuestions = lines.slice(startIdx).map((line, idx) => {
+          // Robust CSV parsing for quoted strings with commas
+          const columns = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
+          const cleaned = columns.map(c => c.replace(/^"|"$/g, '').trim());
+          
+          if (cleaned.length < 2) return null; // Skip invalid lines
+
+          return {
+            quiz_id: id,
+            question_text: cleaned[0] || `Imported Node ${idx + 1}`,
+            options: [
+              cleaned[1] || "", 
+              cleaned[2] || "", 
+              cleaned[3] || "", 
+              cleaned[4] || ""
+            ],
+            correct_answer: (cleaned[5] || "A").toUpperCase(),
+            time_limit: parseInt(cleaned[6]) || 30,
+            points: parseInt(cleaned[7]) || 100,
+            question_type: 'mcq',
+            order_index: questions.length + idx
+          };
+        }).filter(Boolean);
+
+        if (newQuestions.length === 0) throw new Error("No valid questions found in CSV.");
+
+        setSubmitting(true);
+        const { error } = await supabase
+          .from("questions")
+          .insert(newQuestions);
+
+        if (error) throw error;
+
+        toast.success(`SUCCESS: ${newQuestions.length} nodes integrated into neural mesh.`);
+        await loadData();
+      } catch (err) {
+        console.error("CSV Processing Error:", err);
+        toast.error("INTEGRATION FAILED: " + err.message);
+      } finally {
+        setSubmitting(false);
+        e.target.value = ""; // Reset input
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleAuthorizeNode = async (e) => {
@@ -180,29 +242,29 @@ export default function QuizConfigurePage({ params }) {
 
          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 md:gap-8 mb-6 md:mb-16">
               <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 md:gap-6 w-full lg:w-auto">
-                 <div className="flex items-center gap-3 bg-white px-5 md:px-8 py-3 md:py-4 rounded-[16px] md:rounded-[24px] border border-[#E2E8F0] shadow-sm w-full sm:w-auto">
-                    <Hash size={18} className="text-[#2563EB]" />
-                    <span className="text-[11px] md:text-sm font-black text-[#0F172A] uppercase tracking-widest leading-none">
+                 <div className="flex items-center gap-2 bg-white px-3 md:px-5 py-2 md:py-2.5 rounded-[12px] md:rounded-[16px] border border-[#E2E8F0] shadow-sm w-full sm:w-auto">
+                    <Hash size={14} className="text-[#2563EB]" />
+                    <span className="text-[9px] md:text-xs font-black text-[#0F172A] uppercase tracking-widest leading-none">
                        {questions.length} <span className="hidden xs:inline">Nodes Registered</span><span className="xs:hidden">Nodes</span>
                     </span>
                  </div>
                  
-                 <div className="flex items-center gap-3 bg-white px-5 md:px-8 py-3 md:py-4 rounded-[16px] md:rounded-[24px] border border-[#E2E8F0] shadow-sm w-full sm:w-auto">
-                    <Users size={18} className="text-emerald-500" />
-                    <span className="text-[11px] md:text-sm font-black text-[#0F172A] uppercase tracking-widest leading-none">
+                 <div className="flex items-center gap-2 bg-white px-3 md:px-5 py-2 md:py-2.5 rounded-[12px] md:rounded-[16px] border border-[#E2E8F0] shadow-sm w-full sm:w-auto">
+                    <Users size={14} className="text-emerald-500" />
+                    <span className="text-[9px] md:text-xs font-black text-[#0F172A] uppercase tracking-widest leading-none">
                        {participantsCount} <span className="hidden xs:inline">Authorized Personnel</span><span className="xs:hidden">Users</span>
                     </span>
                  </div>
 
-                 <div className="flex items-center gap-3 bg-white px-5 md:px-8 py-3 md:py-4 rounded-[16px] md:rounded-[24px] border-2 border-primary-blue/30 shadow-lg shadow-blue-50 w-full sm:w-auto group">
-                    <Lock size={18} className="text-primary-blue" />
+                 <div className="flex items-center gap-2 bg-white px-3 md:px-5 py-2 md:py-2.5 rounded-[12px] md:rounded-[16px] border-2 border-primary-blue/30 shadow-lg shadow-blue-50 w-full sm:w-auto group">
+                    <Lock size={14} className="text-primary-blue" />
                     <div className="flex flex-col">
-                       <span className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest leading-none mb-1">Access Protocol</span>
+                       <span className="text-[7px] font-black text-[#94A3B8] uppercase tracking-widest leading-none mb-1">Access Protocol</span>
                        <input 
                          type="text"
                          defaultValue={quiz?.access_code || ""}
                          placeholder="NOT_SET"
-                         className="bg-transparent text-[11px] md:text-sm font-black text-[#0F172A] outline-none uppercase w-24"
+                         className="bg-transparent text-[9px] md:text-xs font-black text-[#0F172A] outline-none uppercase w-20"
                          onBlur={(e) => handleUpdateAccessKey(e.target.value)}
                          onKeyDown={(e) => e.key === 'Enter' && handleUpdateAccessKey(e.target.value)}
                        />
@@ -213,28 +275,42 @@ export default function QuizConfigurePage({ params }) {
                    <button 
                      onClick={() => handleDeleteQuestion(editingQuestionId)}
                      disabled={submitting}
-                     className="bg-red-500 text-white px-6 md:px-8 py-3 md:py-4 rounded-[16px] md:rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-red-200 hover:bg-red-600 active:scale-95 transition-all text-[11px] md:text-sm font-black uppercase tracking-widest disabled:opacity-50 w-full sm:w-auto"
+                     className="bg-red-500 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-[12px] md:rounded-[16px] flex items-center justify-center gap-2 shadow-xl shadow-red-200 hover:bg-red-600 active:scale-95 transition-all text-[9px] md:text-xs font-black uppercase tracking-widest disabled:opacity-50 w-full sm:w-auto"
                    >
-                     <Trash2 size={18} />
+                     <Trash2 size={14} />
                      <span>Delete <span className="hidden xs:inline">Node</span></span>
                    </button>
                  ) : (
-                   <button 
-                     onClick={() => {
-                       setEditingQuestionId(null);
-                       setNewQuestion({ content: "", options: ["", "", "", ""], correct_answer: "A", time_limit: 30, points: 100 });
-                       window.scrollTo({ top: 300, behavior: 'smooth' });
-                     }}
-                     className="bg-[#2563EB] text-white px-6 md:px-8 py-3 md:py-4 rounded-[16px] md:rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-blue-200 hover:scale-[1.02] active:scale-95 transition-all text-[11px] md:text-sm font-black uppercase tracking-widest w-full sm:w-auto"
-                   >
-                     <Plus size={18} strokeWidth={3} />
-                     <span>Add <span className="hidden xs:inline">Node</span></span>
-                   </button>
+                   <div className="flex items-center gap-2 w-full sm:w-auto">
+                     <button 
+                       onClick={() => {
+                         setEditingQuestionId(null);
+                         setNewQuestion({ content: "", options: ["", "", "", ""], correct_answer: "A", time_limit: 30, points: 100 });
+                         window.scrollTo({ top: 300, behavior: 'smooth' });
+                       }}
+                       className="bg-[#2563EB] text-white px-4 md:px-6 py-2 md:py-2.5 rounded-[12px] md:rounded-[16px] flex items-center justify-center gap-2 shadow-xl shadow-blue-200 hover:scale-[1.02] active:scale-95 transition-all text-[9px] md:text-xs font-black uppercase tracking-widest flex-1 sm:flex-none"
+                     >
+                       <Plus size={14} strokeWidth={3} />
+                       <span>Add <span className="hidden xs:inline">Node</span></span>
+                     </button>
+
+                     <label className="bg-emerald-500 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-[12px] md:rounded-[16px] flex items-center justify-center gap-2 shadow-xl shadow-emerald-200 hover:bg-emerald-600 active:scale-95 transition-all text-[9px] md:text-xs font-black uppercase tracking-widest cursor-pointer">
+                       <FileUp size={14} />
+                       <span className="hidden sm:inline">Bulk Import</span>
+                       <input 
+                         type="file" 
+                         accept=".csv" 
+                         className="hidden" 
+                         onChange={handleCSVUpload}
+                         disabled={submitting}
+                       />
+                     </label>
+                   </div>
                  )}
               </div>
 
              <header className="text-left lg:text-right w-full lg:w-auto">
-                <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-[#0F172A] tracking-tighter uppercase leading-none">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tighter uppercase leading-none">
                    Configure <span className="text-[#2563EB]">Intelligence</span>
                 </h1>
                 <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] mt-2">
@@ -257,30 +333,30 @@ export default function QuizConfigurePage({ params }) {
                              value={newQuestion.content || ""}
                              onChange={(e) => setNewQuestion({...newQuestion, content: e.target.value})}
                              placeholder="Enter the technical challenge protocol..."
-                             className="w-full bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-[24px] md:rounded-[32px] p-6 md:p-8 text-lg md:text-2xl font-black text-[#0F172A] focus:outline-none focus:border-[#2563EB] flex-1 min-h-[160px] md:min-h-0 resize-none"
+                             className="w-full bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-[16px] md:rounded-[24px] p-4 md:p-6 text-base md:text-lg font-black text-[#0F172A] focus:outline-none focus:border-[#2563EB] flex-1 min-h-[120px] md:min-h-0 resize-none"
                            />
 
                            <div className="flex flex-col gap-3 pt-2">
                               <button
                                 type="submit"
                                 disabled={submitting || !newQuestion.content || newQuestion.options.some(opt => !opt) || !newQuestion.time_limit || !newQuestion.points}
-                                className={`w-full py-5 md:py-6 rounded-[20px] md:rounded-[28px] font-black text-lg md:text-xl uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-4 group ${
+                                className={`w-full py-3 md:py-4 rounded-[12px] md:rounded-[16px] font-black text-base md:text-lg uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-3 group ${
                                   (submitting || !newQuestion.content || newQuestion.options.some(opt => !opt) || !newQuestion.time_limit || !newQuestion.points)
                                     ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
                                     : "bg-[#0F172A] text-white hover:scale-[1.02] active:scale-95"
                                 }`}
                               >
                                  <span>{submitting ? "Authorizing..." : "Authorize Node"}</span>
-                                 <Zap className={`${(submitting || !newQuestion.content || newQuestion.options.some(opt => !opt) || !newQuestion.time_limit || !newQuestion.points) ? "text-slate-300" : "text-blue-500 fill-blue-500"} w-6 h-6 md:w-8 md:h-8 group-hover:animate-pulse`} />
+                                 <Zap className={`${(submitting || !newQuestion.content || newQuestion.options.some(opt => !opt) || !newQuestion.time_limit || !newQuestion.points) ? "text-slate-300" : "text-blue-500 fill-blue-500"} w-5 h-5 md:w-6 md:h-6 group-hover:animate-pulse`} />
                               </button>
 
                               <button
                                 type="button"
                                 onClick={() => router.push('/quiz/admin/quizzes')}
-                                className="w-full py-5 md:py-6 rounded-[20px] md:rounded-[28px] border-2 border-[#0F172A] font-black text-[10px] md:text-xs uppercase tracking-[0.4em] text-[#0F172A] hover:bg-slate-50 transition-all flex items-center justify-center gap-4 group"
+                                className="w-full py-3 md:py-4 rounded-[12px] md:rounded-[16px] border-2 border-[#0F172A] font-black text-[9px] md:text-[10px] uppercase tracking-[0.4em] text-[#0F172A] hover:bg-slate-50 transition-all flex items-center justify-center gap-3 group"
                               >
                                  <span>Finish Protocol</span>
-                                 <ArrowRight size={16} className="group-hover:translate-x-1 transition-all" />
+                                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-all" />
                               </button>
                            </div>
                         </div>
@@ -292,7 +368,7 @@ export default function QuizConfigurePage({ params }) {
                                  <div key={label} className="space-y-3">
                                     <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.4em] ml-6">Option Node {label}</label>
                                     <div className="relative group">
-                                       <div className="absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 bg-white border-2 border-[#E2E8F0] rounded-2xl flex items-center justify-center text-sm font-black text-[#2563EB] shadow-sm">
+                                       <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border-2 border-[#E2E8F0] rounded-xl flex items-center justify-center text-[10px] font-black text-[#2563EB] shadow-sm">
                                           {label}
                                        </div>
                                        <input 
@@ -305,7 +381,7 @@ export default function QuizConfigurePage({ params }) {
                                            setNewQuestion({...newQuestion, options: opts});
                                          }}
                                          placeholder={`Define protocol ${label}...`}
-                                         className="w-full bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-[24px] py-6 pl-24 pr-8 text-lg font-black text-[#0F172A] focus:outline-none focus:border-[#2563EB] transition-all"
+                                         className="w-full bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-[16px] py-4 pl-16 pr-6 text-sm font-black text-[#0F172A] focus:outline-none focus:border-[#2563EB] transition-all"
                                        />
                                     </div>
                                  </div>
@@ -314,13 +390,13 @@ export default function QuizConfigurePage({ params }) {
 
                            <div className="space-y-6 pt-4">
                               <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.4em] ml-6">Correct Response Signature</label>
-                              <div className="flex gap-4">
+                              <div className="flex gap-2">
                                  {['A', 'B', 'C', 'D'].map((label) => (
                                     <button
                                       key={label}
                                       type="button"
                                       onClick={() => setNewQuestion({...newQuestion, correct_answer: label})}
-                                      className={`flex-1 py-7 rounded-[28px] font-black text-base transition-all border-2 ${
+                                      className={`flex-1 py-4 rounded-[16px] font-black text-sm transition-all border-2 ${
                                         newQuestion.correct_answer === label 
                                           ? "bg-[#2563EB] text-white border-[#2563EB] shadow-2xl shadow-blue-200 scale-[1.05]" 
                                           : "bg-white text-[#94A3B8] border-[#E2E8F0] hover:border-[#2563EB]/40"
@@ -336,7 +412,7 @@ export default function QuizConfigurePage({ params }) {
                               <div className="space-y-3">
                                  <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.4em] ml-6">Response Timer (Sec)</label>
                                  <div className="relative">
-                                    <Clock className="absolute left-6 top-1/2 -translate-y-1/2 text-[#2563EB] w-5 h-5" />
+                                    <Clock className="absolute left-5 top-1/2 -translate-y-1/2 text-[#2563EB] w-4 h-4" />
                                     <input 
                                       type="text"
                                       value={newQuestion.time_limit || ""}
@@ -345,14 +421,14 @@ export default function QuizConfigurePage({ params }) {
                                         setNewQuestion({...newQuestion, time_limit: val ? parseInt(val) : ""})
                                       }}
                                       placeholder="00"
-                                      className="w-full bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-[28px] py-6 pl-16 pr-8 text-lg font-black text-[#0F172A] focus:outline-none focus:border-[#2563EB] transition-all"
+                                      className="w-full bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-[16px] py-4 pl-12 pr-6 text-sm font-black text-[#0F172A] focus:outline-none focus:border-[#2563EB] transition-all"
                                     />
                                  </div>
                               </div>
                               <div className="space-y-3">
                                  <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.4em] ml-6">Node Magnitude (Pts)</label>
                                  <div className="relative">
-                                    <Target className="absolute left-6 top-1/2 -translate-y-1/2 text-amber-500 w-5 h-5" />
+                                    <Target className="absolute left-5 top-1/2 -translate-y-1/2 text-amber-500 w-4 h-4" />
                                     <input 
                                       type="text"
                                       value={newQuestion.points || ""}
@@ -361,7 +437,7 @@ export default function QuizConfigurePage({ params }) {
                                         setNewQuestion({...newQuestion, points: val ? parseInt(val) : ""})
                                       }}
                                       placeholder="0"
-                                      className="w-full bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-[28px] py-6 pl-16 pr-8 text-lg font-black text-[#0F172A] focus:outline-none focus:border-[#2563EB] transition-all"
+                                      className="w-full bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-[16px] py-4 pl-12 pr-6 text-sm font-black text-[#0F172A] focus:outline-none focus:border-[#2563EB] transition-all"
                                     />
                                  </div>
                               </div>
@@ -397,14 +473,14 @@ export default function QuizConfigurePage({ params }) {
                                   });
                                   window.scrollTo({ top: 300, behavior: 'smooth' });
                                 }}
-                                className={`flex-shrink-0 w-14 h-14 rounded-2xl border-2 flex items-center justify-center text-lg font-black transition-all shadow-sm relative group active:scale-95 ${
+                                className={`flex-shrink-0 w-10 h-10 rounded-xl border-2 flex items-center justify-center text-sm font-black transition-all shadow-sm relative group active:scale-95 ${
                                   editingQuestionId === q.id 
                                     ? "bg-blue-600 border-blue-600 text-white" 
                                     : "bg-white border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB] hover:text-[#2563EB] hover:bg-blue-50"
                                 }`}
                               >
                                  {idx + 1}
-                                 <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white shadow-sm ${
+                                 <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white shadow-sm ${
                                    editingQuestionId === q.id ? "bg-white" : "bg-emerald-500"
                                  }`} />
                               </button>
@@ -417,13 +493,13 @@ export default function QuizConfigurePage({ params }) {
                                setNewQuestion({ content: "", options: ["", "", "", ""], correct_answer: "A", time_limit: 30, points: 100 });
                                window.scrollTo({ top: 300, behavior: 'smooth' });
                              }}
-                             className={`flex-shrink-0 w-14 h-14 rounded-2xl border-2 flex items-center justify-center transition-all active:scale-95 ml-2 ${
+                             className={`flex-shrink-0 w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-all active:scale-95 ml-2 ${
                                editingQuestionId === null 
                                  ? "bg-white border-blue-600 text-blue-600 shadow-lg shadow-blue-100" 
                                  : "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-700"
                              }`}
                            >
-                              <Plus size={24} strokeWidth={3} />
+                              <Plus size={18} strokeWidth={3} />
                            </button>
                         </div>
                      </div>
