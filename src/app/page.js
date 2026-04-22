@@ -25,7 +25,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [userRole, setUserRole] = useState("candidate"); // Default to candidate protocol
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -51,27 +50,35 @@ export default function LoginPage() {
     setError(null);
     setSuccessMessage(null);
 
-    // Mock bypass logic
+    // Mock bypass logic - ONLY for basic testing, default to user
     if (!isSignUp) {
       if (email === "1" && password === "1") {
         document.cookie = "mock_session=user; path=/";
         router.push("/dashboard");
         return;
       }
-      if (email === "2" && password === "2") {
-        document.cookie = "mock_session=admin; path=/";
-        router.push("/quiz/admin");
-        return;
-      }
-      if (email === "1234567890" && password === "0987654321") {
-        document.cookie = "mock_session=admin; path=/";
-        router.push("/quiz/admin");
-        return;
-      }
+      
+      // Admin bypasses removed per security protocol request
 
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) { setError(error.message); setLoading(false); }
-      else { router.push("/dashboard"); }
+      const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) { 
+        setError(error.message.toUpperCase()); 
+        setLoading(false); 
+      }
+      else { 
+        // Redirect based on role from database
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authData.user.id)
+          .single();
+          
+        if (profile?.role === "admin" || profile?.role === "evaluator") {
+          router.push("/quiz/admin");
+        } else {
+          router.push("/dashboard");
+        }
+      }
     } else {
       if (password !== confirmPassword) {
         setError("Security keys do not match.");
@@ -79,37 +86,35 @@ export default function LoginPage() {
         return;
       }
 
-      // Domain restriction removed per user request
-
+      // Every account registered through UI is strictly a 'candidate'
       const { data: authData, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: fullName, role: userRole },
+          data: { full_name: fullName, role: 'candidate' },
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         }
       });
 
       if (error) { 
-        // Handle Supabase "Signups not allowed" or other errors
         if (error.message.includes("Signups not allowed")) {
-          setError("PROTOCOL ARCHIVE ERROR: System administrator has currently locked new node registrations. Contact authorized personnel.");
+          setError("PROTOCOL ARCHIVE ERROR: System administrator has currently locked new node registrations.");
         } else {
           setError(error.message.toUpperCase()); 
         }
         setLoading(false); 
       }
       else if (authData.user) { 
-        // Sync to public profiles table for administrative oversight
+        // Sync to public profiles table as a 'candidate'
         await supabase.from('profiles').insert([{
           id: authData.user.id,
           full_name: fullName,
           email: email,
-          role: userRole,
+          role: 'candidate',
           created_at: new Date().toISOString()
         }]);
 
-        setSuccessMessage("SYNCHRONIZATION COMPLETE: Node established. You can now Sync Credentials to enter."); 
+        setSuccessMessage("SYNCHRONIZATION COMPLETE: Node established as Candidate Station."); 
         setLoading(false); 
       }
     }
@@ -160,38 +165,38 @@ export default function LoginPage() {
                 <h1 className="text-lg font-black tracking-tighter uppercase leading-none">Skill Forge</h1>
               </div>
 
-              <div className="flex-1 flex flex-col justify-center space-y-12">
-                <div className="space-y-4">
+              <div className="flex-1 flex flex-col justify-center space-y-10 py-6">
+                <div className="space-y-3">
                   <h2 className="text-4xl font-black leading-[0.9] tracking-tighter uppercase">
                     {isSignUp ? "Connect\nNode" : "System\nSync"}
                   </h2>
-                  <p className="text-blue-100/70 text-[12px] font-medium leading-relaxed max-w-[200px]">
+                  <p className="text-blue-100/70 text-[11px] font-medium leading-relaxed max-w-[220px]">
                     {isSignUp 
                       ? "Establish your node presence in the NEXUS protocol layers."
                       : "Synchronize your authorization keys for secure node access."}
                   </p>
                 </div>
 
-                <div className="space-y-5">
+                <div className="space-y-4">
                   {[
                     { icon: Zap, text: "Instant Validation" },
                     { icon: Lock, text: "Military Grade Encryption" },
                     { icon: Activity, text: "Biometric Identity Nodes" }
                   ].map((item, i) => (
                     <div key={i} className="flex items-center gap-4 group/item">
-                      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10 group-hover/item:bg-white/10 transition-colors">
-                        <item.icon size={14} className="text-blue-300" />
+                      <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 group-hover/item:bg-white/10 transition-colors">
+                        <item.icon size={15} className="text-blue-300" />
                       </div>
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">{item.text}</span>
+                      <span className="text-[9.5px] font-black uppercase tracking-[0.2em] text-white/80">{item.text}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="mt-auto space-y-8 pt-10">
+              <div className="mt-auto space-y-6 pt-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-px bg-white/20" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Protocol 4.2.0-S</span>
+                  <div className="w-8 h-px bg-white/20" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.4em] text-white/30">Protocol 4.2.0-S</span>
                 </div>
                 <div className="flex gap-8 text-[11px] font-black uppercase tracking-widest text-white/40">
                   <span className="hover:text-white cursor-pointer transition-colors">Privacy Policy</span>
