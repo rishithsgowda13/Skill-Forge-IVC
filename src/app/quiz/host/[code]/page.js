@@ -132,11 +132,23 @@ export default function AdminHostPage() {
   }, [code]);
 
   async function fetchLeaderboard(quizId, currentPresentUsers = null) {
+    // Fetch all submissions for scores
     const { data, error } = await supabase
       .from("submissions")
       .select("user_id, points, profiles!user_id(full_name)")
       .eq("quiz_id", quizId);
-      
+
+    // Fetch profiles for all present users (even if no submissions yet)
+    const presentIds = (currentPresentUsers || presentUsers).map(u => u.id).filter(id => !id.startsWith('guest-'));
+    let profilesData = [];
+    if (presentIds.length > 0) {
+      const { data: pData } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', presentIds);
+      profilesData = pData || [];
+    }
+
     if (error) {
       console.warn("LEADERBOARD SYNC WARNING:", error.message);
       setLeaderboard(currentPresentUsers || []);
@@ -159,9 +171,10 @@ export default function AdminHostPage() {
     const merged = Array.from(allUserIds).map(uid => {
       const pres = usersToMerge.find(u => u.id === uid);
       const subProfile = data?.find(s => s.user_id === uid)?.profiles;
+      const directProfile = profilesData.find(p => p.id === uid);
       
-      // Prioritize the DB name (subProfile) over the Presence name (pres)
-      const fullName = subProfile?.full_name || pres?.full_name || `Node-${uid.toString().substring(0, 5)}`;
+      // Prioritize: Database Profile > Presence Name > Guest/Node ID
+      const fullName = directProfile?.full_name || subProfile?.full_name || pres?.full_name || `Node-${uid.toString().substring(0, 5)}`;
       
       return {
         id: uid,
@@ -223,11 +236,16 @@ export default function AdminHostPage() {
   };
 
   const resetQuiz = async () => {
+    // Hard reset: Clear database and return to lobby
+    if (!quiz?.id) return;
+    await supabase.from("submissions").delete().eq("quiz_id", quiz.id);
+    setLeaderboard([]);
     await updateQuizStatus('lobby', 0);
   };
 
   const startQuiz = async () => {
-    // Clear any existing scores/submissions if starting over
+    if (!quiz?.id) return;
+    // Clear any existing scores/submissions for a fresh start
     await supabase.from("submissions").delete().eq("quiz_id", quiz.id);
     setLeaderboard([]);
     
