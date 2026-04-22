@@ -50,7 +50,7 @@ export default function MobileNav() {
   const navItems = isAdmin ? adminItems : candidateItems;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-[#F1F5F9] px-6 py-4 flex items-center justify-between z-[100] lg:hidden safe-area-bottom shadow-[0_-20px_50px_rgba(0,0,0,0.05)] rounded-t-[32px]">
+    <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-[#F1F5F9] px-4 py-3 flex items-center justify-between z-[100] lg:hidden safe-area-bottom shadow-[0_-15px_40px_rgba(0,0,0,0.05)] rounded-t-[24px]">
       {navItems.map((item) => {
         const isActive = pathname === item.href;
         return (
@@ -59,14 +59,14 @@ export default function MobileNav() {
             onClick={() => item.action ? item.action() : router.push(item.href)}
             className="flex flex-col items-center gap-1.5 px-3 relative"
           >
-            <div className={`p-2.5 rounded-2xl transition-all duration-300 ${
+            <div className={`p-2 rounded-xl transition-all duration-300 ${
               isActive 
                 ? "bg-blue-600 text-white shadow-lg shadow-blue-200" 
                 : "text-[#94A3B8]"
             }`}>
-              <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+              <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} />
             </div>
-            <span className={`text-[9px] font-black uppercase tracking-widest ${
+            <span className={`text-[8.5px] font-black uppercase tracking-widest ${
               isActive ? "text-blue-600" : "text-[#94A3B8]"
             }`}>
               {item.label}
