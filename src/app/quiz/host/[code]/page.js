@@ -78,7 +78,7 @@ export default function AdminHostPage() {
       fetchLeaderboard(quizData.id);
 
       // Subscribe to communications and presence
-      const canal_id = `quiz_session_${code.toUpperCase()}_${Date.now()}`;
+      const canal_id = `quiz_session_${code.toUpperCase()}`;
       const channel = supabase
         .channel(canal_id)
         .on(
@@ -134,52 +134,42 @@ export default function AdminHostPage() {
   async function fetchLeaderboard(quizId, currentPresentUsers = null) {
     const { data, error } = await supabase
       .from("submissions")
-      .select("user_id, total_score, profiles!user_id(full_name)")
+      .select("user_id, points, profiles!user_id(full_name)")
       .eq("quiz_id", quizId);
       
     if (error) {
-      console.warn("LEADERBOARD SYNC WARNING (Likely missing submissions table):", error.message);
+      console.warn("LEADERBOARD SYNC WARNING:", error.message);
       setLeaderboard(currentPresentUsers || []);
       return;
     }
 
-    console.log("SUBMISSIONS DATA:", data?.length || 0, "records");
-
-
-    // Aggregate scores by user ID
-    const totals = (data || []).reduce((acc, curr) => {
+    const scoreMap = (data || []).reduce((acc, curr) => {
       const uid = curr.user_id;
-      if (!acc[uid]) {
-        acc[uid] = { 
-          id: uid, 
-          full_name: curr.profiles?.full_name || "Challenger", 
-          total_score: 0 
-        };
-      }
-      acc[uid].total_score += curr.total_score || 0;
+      if (!uid) return acc;
+      acc[uid] = (acc[uid] || 0) + (curr.points || 0);
       return acc;
     }, {});
 
-    // Sort and limit to top 15 (larger window)
-    const scoredUsers = Object.values(totals);
-    
-    // Merge with present users who have no scores yet
-    // Use the passed in users if available, otherwise fallback to state
     const usersToMerge = currentPresentUsers || presentUsers;
-    const allUsers = [...scoredUsers];
-    
-    usersToMerge.forEach(pu => {
-      if (!allUsers.some(u => u.id === pu.id)) {
-        allUsers.push({ id: pu.id, full_name: pu.full_name, total_score: 0 });
-      }
-    });
+    const allUserIds = new Set([
+      ...Object.keys(scoreMap),
+      ...usersToMerge.map(u => u.id)
+    ]);
 
-    const sorted = allUsers
-      .filter(u => u.full_name) // Ensure valid data
-      .sort((a, b) => (b.total_score || 0) - (a.total_score || 0))
-      .slice(0, 15);
+    const merged = Array.from(allUserIds).map(uid => {
+      const pres = usersToMerge.find(u => u.id === uid);
+      const subProfile = data?.find(s => s.user_id === uid)?.profiles;
+      const fullName = pres?.full_name || subProfile?.full_name || `Node-${uid.toString().substring(0, 5)}`;
       
-    setLeaderboard(sorted);
+      return {
+        id: uid,
+        full_name: fullName,
+        total_score: scoreMap[uid] || 0,
+        points: scoreMap[uid] || 0
+      };
+    }).sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
+
+    setLeaderboard(merged);
   }
 
   useEffect(() => {
@@ -288,7 +278,7 @@ export default function AdminHostPage() {
   if (loading) return null;
 
   return (
-    <div className="min-h-screen lg:h-screen bg-[#020617] text-white flex flex-col lg:flex-row font-sans lg:overflow-hidden selection:bg-primary-blue/30">
+    <div className="h-screen bg-[#020617] text-white flex flex-col lg:flex-row font-sans overflow-hidden selection:bg-primary-blue/30 relative">
        {/* Background Ambient Glows */}
        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary-blue/10 rounded-full blur-[120px]" />
@@ -311,23 +301,19 @@ export default function AdminHostPage() {
                 </div>
              </div>
 
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 p-2 rounded-[28px] flex items-center gap-2 shadow-2xl">
-                 <div className="flex items-center gap-3 px-6 py-3 bg-white/5 rounded-[22px] border border-white/5">
-                    <Users className="text-primary-blue w-4 h-4" />
-                    <span className="text-[17px] font-black text-white">{joinCount} <span className="text-white/40 text-xs tracking-widest ml-1">NODES</span></span>
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 p-1 rounded-[20px] flex items-center gap-1 shadow-xl">
+                 <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-[15px] border border-white/5">
+                    <Users className="text-primary-blue w-3.5 h-3.5" />
+                    <span className="text-xs font-black text-white">{joinCount} <span className="text-white/40 text-[9px] tracking-widest ml-1">NODES</span></span>
                  </div>
-                 <div className="hidden sm:flex items-center gap-3 px-6 py-3">
-                    <Monitor className="text-white/20 w-4 h-4" />
-                    <span className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30">TV SYNC ACTIVE</span>
-                 </div>
-                 <div className="w-px h-6 bg-white/10 hidden sm:block" />
-                 <div className="px-6 py-3">
-                    <span className="text-sm font-black tracking-[0.3em] text-primary-blue">{code}</span>
+                 <div className="px-5 py-2 bg-white text-[#0F172A] rounded-[15px] shadow-lg">
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] opacity-30 block mb-0.5">Access Key</span>
+                    <span className="text-lg font-black tracking-[0.2em] leading-none uppercase">{code}</span>
                  </div>
               </div>
           </header>
 
-          <main className="flex-1 flex flex-col justify-center max-w-6xl mx-auto w-full relative">
+          <main className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto w-full relative">
              <AnimatePresence mode="wait">
                 {status === 'lobby' && (
                   <motion.div
@@ -335,62 +321,55 @@ export default function AdminHostPage() {
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, y: -20 }}
-                    className="space-y-12"
+                    className="flex flex-col items-center text-center space-y-8 w-full"
                   >
-                     <div className="text-center space-y-6">
+                     <div className="space-y-4">
                         <div className="relative w-fit mx-auto">
-                           <div className="absolute inset-0 bg-primary-blue/20 blur-3xl rounded-full" />
-                           <div className="relative p-10 bg-white/5 rounded-[50px] border border-primary-blue/20 backdrop-blur-3xl mb-4">
-                              <Users size={80} className="text-primary-blue" />
+                           <div className="absolute inset-0 bg-primary-blue/20 blur-[60px] rounded-full" />
+                           <div className="relative p-6 bg-white/5 rounded-[36px] border border-white/10 backdrop-blur-3xl shadow-xl">
+                              <Users size={44} className="text-primary-blue" />
                            </div>
                         </div>
                         <div className="space-y-2">
-                           <h1 className="text-7xl md:text-8xl font-black tracking-tighter uppercase leading-none">JOIN THE <span className="text-primary-blue">NODE</span></h1>
-                           <p className="text-sm font-black text-white/30 uppercase tracking-[0.6em]">Scanning for synchronized candidate signals</p>
+                           <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase leading-none">JOIN THE <span className="text-primary-blue">NODE</span></h1>
+                           <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.5em]">Synchronizing neural handshake signals</p>
                         </div>
                      </div>
 
-                     <div className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto min-h-[120px] content-start">
+                     <div className="flex flex-wrap justify-center gap-2.5 w-full min-h-[100px] content-center">
                         <AnimatePresence>
                            {presentUsers.map((user, i) => (
                              <motion.div
                                key={user.id}
-                               initial={{ scale: 0, opacity: 0, y: 10 }}
-                               animate={{ scale: 1, opacity: 1, y: 0 }}
-                               exit={{ scale: 0, opacity: 0 }}
-                               className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-4 rounded-[22px] flex items-center gap-4 transition-all group backdrop-blur-sm shadow-xl"
+                               initial={{ scale: 0.8, opacity: 0 }}
+                               animate={{ scale: 1, opacity: 1 }}
+                               className="bg-white/5 border border-white/5 px-5 py-3 rounded-[18px] flex items-center gap-2.5 backdrop-blur-sm"
                              >
-                                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] group-hover:animate-ping" />
-                                <span className="text-sm font-black text-white/80 uppercase tracking-widest">{user.full_name}</span>
+                                <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                <span className="text-[11px] font-black text-white/70 uppercase tracking-widest">{user.full_name}</span>
                              </motion.div>
                            ))}
                         </AnimatePresence>
                         {presentUsers.length === 0 && (
-                          <div className="flex flex-col items-center gap-4 opacity-20 py-10">
-                             <div className="w-12 h-1 px-1 bg-white/10 rounded-full overflow-hidden">
+                          <div className="flex flex-col items-center gap-3 opacity-10">
+                             <div className="w-10 h-0.5 bg-white/20 rounded-full overflow-hidden">
                                 <motion.div 
-                                  animate={{ x: [-40, 40] }} 
-                                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                                  className="w-8 h-full bg-white" 
+                                  animate={{ x: [-30, 30] }} 
+                                  transition={{ duration: 2, repeat: Infinity }}
+                                  className="w-3 h-full bg-white" 
                                 />
                              </div>
-                             <p className="text-[10px] font-black uppercase tracking-[0.5em]">Waiting for neural handshake...</p>
+                             <p className="text-[8px] font-black uppercase tracking-[0.5em]">AWAITING LINK</p>
                           </div>
                         )}
                      </div>
 
-                     <div className="bg-white text-[#020617] p-8 md:p-12 rounded-[48px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col gap-2 max-w-md mx-auto w-full relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary-blue/5 rounded-full translate-x-10 -translate-y-10 group-hover:scale-150 transition-transform duration-700" />
-                        <span className="text-xs font-black uppercase tracking-[0.5em] opacity-40 text-center">Protocol Access Key</span>
-                        <span className="text-8xl font-black tracking-[0.2em] leading-none text-center">{code}</span>
-                     </div>
-
                      <button 
                        onClick={startQuiz}
-                       className="bg-primary-blue hover:bg-blue-600 px-16 py-8 rounded-[32px] text-lg font-black uppercase tracking-[0.4em] transition-all flex items-center gap-6 mx-auto group shadow-[0_20px_50px_rgba(37,99,235,0.3)] hover:scale-[1.02] active:scale-95"
+                       className="bg-primary-blue hover:bg-blue-600 px-10 py-5 rounded-[22px] text-xs font-black uppercase tracking-[0.4em] transition-all flex items-center gap-3 group shadow-xl hover:scale-[1.02] active:scale-95 text-white"
                      >
-                        <span>Initialize Sync</span>
-                        <PlayCircle size={32} fill="currentColor" className="text-white/20 group-hover:text-white transition-colors" />
+                        <span>Initialize Protocol</span>
+                        <PlayCircle size={18} className="opacity-40 group-hover:opacity-100 transition-opacity" />
                      </button>
                   </motion.div>
                 )}
@@ -536,31 +515,31 @@ export default function AdminHostPage() {
              </AnimatePresence>
           </main>
 
-          <footer className="mt-auto pt-10 flex justify-between items-center opacity-40">
-             <div className="text-[10px] font-black uppercase tracking-[0.6em]">Skill Forge • Neural Mesh v4.28</div>
+          <footer className="mt-auto pt-8 flex justify-between items-center opacity-30 px-2">
+             <div className="text-[9px] font-black uppercase tracking-[0.5em]">Skill Forge • Neural Mesh v4.28</div>
              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-3">
-                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,1)]" />
-                   <span className="text-[10px] font-black tracking-[0.4em]">STRENGTH: 98%</span>
+                <div className="flex items-center gap-2.5">
+                   <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,1)]" />
+                   <span className="text-[9px] font-black tracking-[0.3em]">STRENGTH: 98%</span>
                 </div>
              </div>
           </footer>
        </div>
 
         {/* Global Registry Sidebar */}
-        <div className="w-full lg:w-[480px] bg-[#020617] lg:bg-white text-white lg:text-[#0F172A] flex flex-col p-8 md:p-12 overflow-hidden relative border-l border-white/5 lg:border-gray-100">
+        <div className="w-full lg:w-[420px] bg-[#020617] lg:bg-white text-white lg:text-[#0F172A] flex flex-col p-8 md:p-10 overflow-hidden relative border-l border-white/5 lg:border-gray-100">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary-blue/5 rounded-full blur-[100px] pointer-events-none" />
           
-          <div className="relative z-10 mb-12">
-             <div className="flex items-center gap-5 mb-5">
-                <div className="p-3 bg-primary-blue/10 lg:bg-blue-50 rounded-[20px]">
-                   <Medal className="text-primary-blue w-6 h-6" />
+          <div className="relative z-10 mb-10">
+             <div className="flex items-center gap-4 mb-5">
+                <div className="p-2.5 bg-primary-blue/10 lg:bg-blue-50 rounded-[18px]">
+                   <Medal className="text-primary-blue w-5 h-5" />
                 </div>
-                <h3 className="text-2xl font-black uppercase tracking-tighter">Elite Registry</h3>
+                <h3 className="text-xl font-black uppercase tracking-tighter">Elite Registry</h3>
              </div>
-             <div className="flex justify-between items-end mb-4">
-                <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.4em] leading-none">Global Ranking Matrix</p>
-                <span className="text-[10px] font-black uppercase text-primary-blue">{leaderboard.length} LOGS</span>
+             <div className="flex justify-between items-end mb-3">
+                <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] leading-none">Global Ranking Matrix</p>
+                <span className="text-[9px] font-black uppercase text-primary-blue opacity-50">{leaderboard.length} LOGS</span>
              </div>
              <div className="w-full h-1 bg-white/5 lg:bg-gray-100 flex overflow-hidden rounded-full">
                 <motion.div 
@@ -571,12 +550,12 @@ export default function AdminHostPage() {
              </div>
           </div>
 
-          <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar-hide relative z-10 py-2">
+          <div className="flex-1 space-y-3.5 overflow-y-auto pr-1 custom-scrollbar-hide relative z-10 py-1">
              <AnimatePresence mode="popLayout">
                 {leaderboard.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center space-y-6 opacity-20">
-                     <Users size={64} strokeWidth={1} />
-                     <p className="text-[10px] font-black uppercase tracking-[0.5em] text-center">Awaiting Node Connections</p>
+                  <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-10 py-20">
+                     <Users size={48} strokeWidth={1} />
+                     <p className="text-[8px] font-black uppercase tracking-[0.4em] text-center">Awaiting Node Connections</p>
                   </div>
                 ) : leaderboard.map((player, index) => (
                    <motion.div
@@ -648,3 +627,4 @@ export default function AdminHostPage() {
         </div>
     </div>
   );
+}
