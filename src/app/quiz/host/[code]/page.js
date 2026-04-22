@@ -159,7 +159,9 @@ export default function AdminHostPage() {
     const merged = Array.from(allUserIds).map(uid => {
       const pres = usersToMerge.find(u => u.id === uid);
       const subProfile = data?.find(s => s.user_id === uid)?.profiles;
-      const fullName = pres?.full_name || subProfile?.full_name || `Node-${uid.toString().substring(0, 5)}`;
+      
+      // Prioritize the DB name (subProfile) over the Presence name (pres)
+      const fullName = subProfile?.full_name || pres?.full_name || `Node-${uid.toString().substring(0, 5)}`;
       
       return {
         id: uid,
@@ -530,16 +532,16 @@ export default function AdminHostPage() {
         <div className="w-full lg:w-[420px] bg-[#020617] lg:bg-white text-white lg:text-[#0F172A] flex flex-col p-8 md:p-10 overflow-hidden relative border-l border-white/5 lg:border-gray-100">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary-blue/5 rounded-full blur-[100px] pointer-events-none" />
           
-          <div className="relative z-10 mb-10">
-             <div className="flex items-center gap-4 mb-5">
-                <div className="p-2.5 bg-primary-blue/10 lg:bg-blue-50 rounded-[18px]">
-                   <Medal className="text-primary-blue w-5 h-5" />
+          <div className="relative z-10 mb-6 md:mb-10">
+             <div className="flex items-center gap-4 mb-4 md:mb-5">
+                <div className="p-2 bg-primary-blue/10 lg:bg-blue-50 rounded-[14px]">
+                   <Medal className="text-primary-blue w-4 h-4" />
                 </div>
-                <h3 className="text-xl font-black uppercase tracking-tighter">Elite Registry</h3>
+                <h3 className="text-lg font-black uppercase tracking-tighter">Elite Registry</h3>
              </div>
-             <div className="flex justify-between items-end mb-3">
-                <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em] leading-none">Global Ranking Matrix</p>
-                <span className="text-[9px] font-black uppercase text-primary-blue opacity-50">{leaderboard.length} LOGS</span>
+             <div className="flex justify-between items-end mb-2">
+                <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-[0.3em] leading-none">Global Ranking Matrix</p>
+                <span className="text-[8px] font-black uppercase text-primary-blue opacity-50">{leaderboard.length} LOGS</span>
              </div>
              <div className="w-full h-1 bg-white/5 lg:bg-gray-100 flex overflow-hidden rounded-full">
                 <motion.div 
@@ -563,8 +565,8 @@ export default function AdminHostPage() {
                      layout
                      initial={{ opacity: 0, x: 30 }}
                      animate={{ opacity: 1, x: 0 }}
-                     className={`flex items-center justify-between p-6 rounded-[32px] border ${
-                       index === 0 ? 'bg-[#0F172A] lg:bg-[#0F172A] text-white border-[#0F172A] shadow-2xl scale-[1.03] ring-4 ring-primary-blue/10' : 
+                     className={`flex items-center justify-between p-4 rounded-[20px] border ${
+                       index === 0 ? 'bg-[#0F172A] lg:bg-[#0F172A] text-white border-[#0F172A] shadow-2xl scale-[1.01] ring-4 ring-primary-blue/10' : 
                        'bg-white/5 lg:bg-white border-white/5 lg:border-[#F1F5F9]'
                      } transition-all relative overflow-hidden`}
                    >
@@ -573,7 +575,7 @@ export default function AdminHostPage() {
                       )}
                       
                       <div className="flex items-center gap-5 relative z-10">
-                         <div className={`w-11 h-11 rounded-[18px] flex items-center justify-center font-black text-sm ${
+                         <div className={`w-8 h-8 rounded-[12px] flex items-center justify-center font-black text-sm ${
                            index === 0 ? 'bg-amber-400 text-[#0F172A]' : 
                            index === 1 ? 'bg-slate-500/10 text-slate-500' : 
                            index === 2 ? 'bg-orange-500/10 text-orange-600' : 
@@ -592,7 +594,7 @@ export default function AdminHostPage() {
                          </div>
                       </div>
                       <div className="text-right relative z-10">
-                         <span className={`text-2xl font-black tabular-nums ${index === 0 ? 'text-amber-400' : 'text-primary-blue lg:text-[#0F172A]'}`}>
+                         <span className={`text-lg font-black tabular-nums ${index === 0 ? 'text-amber-400' : 'text-primary-blue lg:text-[#0F172A]'}`}>
                            {player.total_score || player.points || 0}
                          </span>
                          <p className="text-[9px] font-black uppercase opacity-30 mt-1">PTS</p>
@@ -602,27 +604,14 @@ export default function AdminHostPage() {
              </AnimatePresence>
           </div>
 
-           {/* Stats Overview */}
-           <div className="mt-8 space-y-4">
-              <div className="bg-[#F8FAFC]/5 lg:bg-[#F8FAFC] border border-white/5 lg:border-[#E2E8F0] p-6 rounded-[36px] flex items-center gap-6 group transition-all hover:border-primary-blue/30">
-                 <div className="w-16 h-16 bg-primary-blue/10 lg:bg-white border border-white/10 lg:border-[#E2E8F0] rounded-[24px] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <Award className="text-primary-blue w-8 h-8" />
-                 </div>
-                 <div className="flex-1">
-                    <p className="text-[10px] font-black text-primary-blue uppercase tracking-[0.3em] mb-1.5">Top Strategist</p>
-                    <h3 className="text-sm font-black uppercase tracking-tight">
-                       {leaderboard[0]?.full_name || "Scanning..."}
-                    </h3>
-                 </div>
-              </div>
-
-               <button 
-                 onClick={resetQuiz}
-                 className="w-full py-5 bg-white/5 lg:bg-slate-50 border border-white/5 lg:border-slate-100 rounded-[28px] text-[10px] font-black uppercase tracking-[0.4em] text-white/30 lg:text-slate-400 hover:text-primary-blue lg:hover:text-primary-blue hover:bg-white/10 lg:hover:bg-blue-50 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
-               >
-                 <Zap size={14} className="fill-current" />
-                 <span>Recalibrate Neural Node</span>
-               </button>
+            <div className="mt-8">
+                <button 
+                  onClick={resetQuiz}
+                  className="w-full py-3 bg-white/5 lg:bg-slate-50 border border-white/5 lg:border-slate-100 rounded-[20px] text-[8px] font-black uppercase tracking-[0.4em] text-white/30 lg:text-slate-400 hover:text-primary-blue lg:hover:text-primary-blue hover:bg-white/10 lg:hover:bg-blue-50 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                >
+                  <Zap size={10} className="fill-current" />
+                  <span>Recalibrate Neural Node</span>
+                </button>
            </div>
         </div>
     </div>
