@@ -67,10 +67,9 @@ export default function Sidebar() {
 
   const adminItems = [
     { href: "/quiz/admin", label: "Control Center", icon: LayoutDashboard },
-    { href: "/quiz/admin/quizzes", label: "Protocols", icon: FileText },
     { href: "/quiz/admin/users", label: "Node Registry", icon: Users },
-    { href: "/quiz/admin/round2", label: "Round 2 Selection", icon: Trophy },
-    { href: "/dashboard/reports", label: "Reports", icon: Activity },
+    { href: "/quiz/admin/quizzes", label: "Protocols", icon: FileText },
+    { href: "/quiz/admin/round2", label: "Reports", icon: Activity },
     { href: "/quiz/admin/security", label: "Security Audit", icon: ShieldCheck },
   ];
 
@@ -78,7 +77,6 @@ export default function Sidebar() {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/quiz/access", label: "Protocol", icon: Zap },
     { href: "/dashboard/research", label: "Secondary Research", icon: BookOpen },
-    { href: "/dashboard/reports", label: "Reports", icon: Activity },
   ];
 
   const navItems = isAdmin ? adminItems : candidateItems;
