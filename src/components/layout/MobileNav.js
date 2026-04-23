@@ -34,14 +34,12 @@ export default function MobileNav() {
     { href: "/quiz/admin", label: "Control", icon: LayoutDashboard },
     { href: "/quiz/admin/quizzes", label: "Protocols", icon: FileText },
     { href: "/quiz/admin/users", label: "Registry", icon: Users },
-    { href: "/dashboard/reports", label: "Reports", icon: Activity },
   ];
 
   const candidateItems = [
     { href: "/dashboard", label: "Nexus", icon: LayoutDashboard },
     { href: "/quiz/access", label: "Protocol", icon: Zap },
     { href: "/dashboard/research", label: "Research", icon: BookOpen },
-    { href: "/dashboard/reports", label: "Reports", icon: Activity },
     { href: "/", label: "Logout", icon: LogOut, action: async () => {
       document.cookie = "mock_session=; path=/; max-age=0;";
       await supabase.auth.signOut();
