@@ -7,7 +7,8 @@ import {
   Users, 
   Zap, 
   Activity,
-  LogOut
+  LogOut,
+  BookOpen
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -39,6 +40,7 @@ export default function MobileNav() {
   const candidateItems = [
     { href: "/dashboard", label: "Nexus", icon: LayoutDashboard },
     { href: "/quiz/access", label: "Protocol", icon: Zap },
+    { href: "/dashboard/research", label: "Research", icon: BookOpen },
     { href: "/dashboard/reports", label: "Reports", icon: Activity },
     { href: "/", label: "Logout", icon: LogOut, action: async () => {
       document.cookie = "mock_session=; path=/; max-age=0;";

@@ -260,18 +260,18 @@ export default function ResearchPage() {
         </motion.div>
       </div>
 
-      <main className="max-w-5xl mx-auto space-y-12 pb-20">
-        <div className="space-y-12">
+      <main className="max-w-5xl mx-auto space-y-8 md:space-y-12 pb-32 md:pb-20">
+        <div className="space-y-8 md:space-y-12">
           {/* Colourfull Rules of Engagement - Horizontal Layout */}
-          <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-[32px] grid grid-cols-1 md:grid-cols-4 gap-6 shadow-sm">
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-4 md:p-6 rounded-[28px] md:rounded-[32px] grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 shadow-sm">
             {[
               { icon: Zap, text: "Aggregate target: 28,000 characters.", color: "text-amber-500", bg: "bg-amber-50", border: "border-amber-100" },
               { icon: BookOpen, text: "Overview block: 10,000 character minimum.", color: "text-blue-500", bg: "bg-blue-50", border: "border-blue-100" },
               { icon: Copy, text: "Paste restriction: Max 100 chars per action.", color: "text-indigo-500", bg: "bg-indigo-50", border: "border-indigo-100" },
               { icon: Clock, text: "Commit once all protocols are green.", color: "text-emerald-500", bg: "bg-emerald-50", border: "border-emerald-100" }
             ].map((rule, i) => (
-              <div key={i} className="flex items-center gap-4 group transition-all hover:scale-[1.02]">
-                <div className={`w-10 h-10 ${rule.bg} border ${rule.border} rounded-xl flex-shrink-0 flex items-center justify-center ${rule.color} shadow-sm transition-transform group-hover:rotate-6`}>
+              <div key={i} className="flex items-center gap-4 group transition-all">
+                <div className={`w-10 h-10 ${rule.bg} border ${rule.border} rounded-xl flex-shrink-0 flex items-center justify-center ${rule.color} shadow-sm`}>
                   <rule.icon size={16} />
                 </div>
                 <span className="text-[10px] font-black text-[#64748B] uppercase tracking-wide leading-tight group-hover:text-[#0F172A] transition-colors">{rule.text}</span>
@@ -282,7 +282,7 @@ export default function ResearchPage() {
           {RESEARCH_BLOCKS.map((block) => (
             <div key={block.id} className="space-y-4">
                <div className="flex justify-between items-end px-2">
-                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-[#0F172A]">{block.label}</h3>
+                  <h3 className="text-[11px] md:text-sm font-black uppercase tracking-[0.2em] text-[#0F172A]">{block.label}</h3>
                   <div className="text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
                      <span className={researchData[block.id].length >= block.min ? "text-emerald-500" : "text-amber-500"}>
                         {researchData[block.id].length.toLocaleString()}
@@ -298,7 +298,7 @@ export default function ResearchPage() {
                     onPaste={(e) => handlePaste(e, block.id)}
                     disabled={profile?.round2_status === 'submitted' || success}
                     placeholder={block.placeholder}
-                    className="w-full bg-white border-2 border-[#F1F5F9] rounded-[24px] p-8 min-h-[300px] text-lg font-medium leading-relaxed focus:outline-none focus:border-[#2563EB]/30 focus:ring-4 focus:ring-blue-50 transition-all placeholder:text-[#CBD5E1] shadow-sm selection:bg-blue-100 resize-none"
+                    className="w-full bg-white border-2 border-[#F1F5F9] rounded-[24px] p-6 md:p-8 min-h-[300px] text-base md:text-lg font-medium leading-relaxed focus:outline-none focus:border-[#2563EB]/30 focus:ring-4 focus:ring-blue-50 transition-all placeholder:text-[#CBD5E1] shadow-sm selection:bg-blue-100 resize-none"
                   />
                   
                   <AnimatePresence>
@@ -330,7 +330,7 @@ export default function ResearchPage() {
           ))}
 
           {/* Minimized Action Node - Bottom Layout */}
-          <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-[32px] space-y-6 mt-12 max-w-lg mx-auto text-center shadow-sm">
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-4 md:p-6 rounded-[28px] md:rounded-[32px] space-y-4 md:space-y-6 mt-8 md:mt-12 max-w-lg mx-auto text-center shadow-sm">
             <div className="flex items-center justify-center gap-4">
               <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-[#2563EB] border border-blue-100">
                 <ShieldCheck size={20} />
