@@ -99,8 +99,6 @@ export default function DashboardPage() {
 
     loadData();
 
-    loadData();
-
     return () => {
       // Cleanup logic if needed
     };
