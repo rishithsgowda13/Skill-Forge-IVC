@@ -75,19 +75,12 @@ export default function Round2SelectionPage() {
   }
 
   async function loadUsers() {
-    // Fetch users who have submitted a quiz
-    const { data: submissions } = await supabase
-      .from("submissions")
-      .select("user_id, profiles(*)")
-      .order("submitted_at", { ascending: false });
-
-    // Get unique users from submissions
-    const uniqueUserIds = [...new Set(submissions?.map(s => s.user_id) || [])];
-    
+    // Fetch all candidate profiles directly, showing those who have submitted first
     const { data: profiles } = await supabase
       .from("profiles")
       .select("*")
-      .in("id", uniqueUserIds);
+      .eq("role", "candidate")
+      .order("round2_status", { ascending: false });
 
     setUsers(profiles || []);
   }
