@@ -41,19 +41,18 @@ export default function AdminHostPage() {
   const [joinCount, setJoinCount] = useState(0);
   const [presentUsers, setPresentUsers] = useState([]);
   const quizRef = useRef(null);
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [countdown, setCountdown] = useState(0);
-  const [status, setStatus] = useState('lobby');
-  const [loading, setLoading] = useState(true);
   const [timer, setTimer] = useState(0);
   const [showOptions, setShowOptions] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const timerRef = useRef(null);
   const channelRef = useRef(null);
-  const [activeRegistryTab, setActiveRegistryTab] = useState('leaderboard');
   const [violations, setViolations] = useState([]);
   const [showResultsModal, setShowResultsModal] = useState(false);
+
+  const currentQuestion = useMemo(() => {
+    if (!quiz?.questions || quiz.current_question_index === undefined) return null;
+    return quiz.questions.find(q => q.order_index === quiz.current_question_index) || null;
+  }, [quiz?.questions, quiz?.current_question_index]);
 
   const fetchLeaderboard = useCallback(async (quizId, currentPresentUsers = null) => {
     const { data, error } = await supabase
@@ -246,12 +245,7 @@ export default function AdminHostPage() {
     };
   }, [code, fetchLeaderboard, supabase]);
 
-  useEffect(() => {
-    if (quiz && quiz.questions && quiz.current_question_index !== undefined) {
-      const q = quiz.questions.find(qt => qt.order_index === quiz.current_question_index);
-      setCurrentQuestion(q);
-    }
-  }, [quiz]);
+  // currentQuestion is now derived via useMemo above for better sync
 
   const updateQuizStatus = async (newStatus, questionIndex = null) => {
     if (!quiz?.id) return;
@@ -262,7 +256,8 @@ export default function AdminHostPage() {
     await supabase.from("quizzes").update(payload).eq("id", quiz.id);
     
     const canal_id = `quiz_session_${code.toUpperCase()}`;
-    const channel = supabase.channel(canal_id);
+    const channel = channelRef.current || supabase.channel(canal_id);
+    
     await channel.send({
       type: 'broadcast',
       event: 'state_update',
@@ -537,7 +532,26 @@ export default function AdminHostPage() {
                   </motion.div>
                 )}
 
-                {status === 'showing-question' && currentQuestion && (
+                 {status === 'countdown' && (
+                    <motion.div
+                      key="countdown"
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 2 }}
+                      className="flex flex-col items-center justify-center space-y-8"
+                    >
+                       <div className="relative">
+                          <div className="absolute inset-0 bg-primary-blue/20 blur-[100px] rounded-full animate-pulse" />
+                          <div className="relative w-48 h-48 rounded-full border-4 border-white/10 flex items-center justify-center backdrop-blur-3xl">
+                             <span className="text-9xl font-black italic tracking-tighter text-white drop-shadow-2xl">{countdown}</span>
+                          </div>
+                       </div>
+                       <div className="space-y-2 text-center">
+                          <h2 className="text-xl font-black uppercase tracking-[0.6em] text-primary-blue animate-pulse">Initializing Question</h2>
+                          <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">Neural handshake in progress...</p>
+                       </div>
+                    </motion.div>
+                           {status === 'showing-question' && (
                    <motion.div
                      key="question"
                      initial={{ opacity: 0, y: 20 }}
@@ -545,74 +559,84 @@ export default function AdminHostPage() {
                      exit={{ opacity: 0, x: -50 }}
                      className="w-full space-y-8"
                    >
-                      <div className="bg-white/5 border border-white/10 p-10 md:p-12 rounded-[48px] backdrop-blur-3xl overflow-hidden relative shadow-2xl">
-                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-                            <div className="flex items-center gap-4">
-                               <span className="bg-blue-500/20 text-blue-400 px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] border border-blue-500/20">Module 0{quiz.current_question_index + 1}</span>
-                               <div className="h-px w-8 bg-white/10" />
-                            </div>
-                            
-                            <div className="flex items-center gap-5 bg-black/20 px-6 py-3 rounded-3xl border border-white/5">
-                               <div className="text-right">
-                                  <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-0.5">Time Remaining</p>
-                                  <p className="text-2xl font-black tabular-nums tracking-tighter leading-none">{timer}</p>
-                               </div>
-                               <div className="w-10 h-10 rounded-full border-2 border-white/5 flex items-center justify-center relative">
-                                  <svg className="absolute inset-0 w-full h-full -rotate-90">
-                                     <circle 
-                                       cx="20" cy="20" r="18" 
-                                       className="stroke-blue-500/10 fill-none" 
-                                       strokeWidth="3" 
-                                     />
-                                     <motion.circle 
-                                       cx="20" cy="20" r="18" 
-                                       className="stroke-blue-500 fill-none" 
-                                       strokeWidth="3" 
-                                       strokeDasharray="113.1"
-                                       initial={{ strokeDashoffset: 0 }}
-                                       animate={{ strokeDashoffset: 113.1 - (113.1 * (timer / (currentQuestion.time_limit || 30))) }}
-                                     />
-                                  </svg>
-                                  <Clock className="w-4 h-4 text-blue-400 opacity-40" />
-                               </div>
-                            </div>
-                         </div>
-
-                         <div className="relative z-10">
-                            <h2 className="text-3xl md:text-4xl font-black leading-tight tracking-tight uppercase max-w-2xl">{currentQuestion.content || currentQuestion.question_text}</h2>
-                         </div>
-                      </div>
-
-                      {showOptions ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                           {currentQuestion.options?.map((opt, idx) => {
-                               const bgColors = ['bg-blue-600', 'bg-red-600', 'bg-amber-600', 'bg-emerald-600'];
-                               const labels = ['A', 'B', 'C', 'D'];
-                               return (
-                                  <motion.div 
-                                    key={idx}
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1, transition: { delay: idx * 0.1 } }}
-                                    className="flex items-center gap-6 p-6 bg-white/5 border border-white/10 rounded-[32px] shadow-xl relative overflow-hidden"
-                                  >
-                                     <div className={`${bgColors[idx]} w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg relative z-10 text-white`}>
-                                        {labels[idx]}
-                                     </div>
-                                     <span className="text-lg md:text-xl font-bold tracking-tight text-white/80 relative z-10">{opt}</span>
-                                  </motion.div>
-                               )
-                           })}
-                        </div>
-                      ) : (
+                      {!currentQuestion ? (
                         <div className="flex flex-col items-center justify-center p-20 bg-white/5 border border-dashed border-white/10 rounded-[56px] animate-pulse space-y-4">
                            <div className="flex items-center gap-4 text-primary-blue text-[11px] font-black uppercase tracking-[0.5em]">
-                              <Zap className="animate-bounce" />
-                              <span>BROADCAST SYNC IN PROGRESS</span>
+                              <Clock className="animate-spin" size={20} />
+                              <span>RECONSTRUCTING QUESTION DATA...</span>
                            </div>
                         </div>
+                      ) : (
+                        <>
+                          <div className="bg-white/5 border border-white/10 p-10 md:p-12 rounded-[48px] backdrop-blur-3xl overflow-hidden relative shadow-2xl">
+                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                                <div className="flex items-center gap-4">
+                                   <span className="bg-blue-500/20 text-blue-400 px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] border border-blue-500/20">Module 0{quiz.current_question_index + 1}</span>
+                                   <div className="h-px w-8 bg-white/10" />
+                                </div>
+                                
+                                <div className="flex items-center gap-5 bg-black/20 px-6 py-3 rounded-3xl border border-white/5">
+                                   <div className="text-right">
+                                      <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-0.5">Time Remaining</p>
+                                      <p className="text-2xl font-black tabular-nums tracking-tighter leading-none">{timer}</p>
+                                   </div>
+                                   <div className="w-10 h-10 rounded-full border-2 border-white/5 flex items-center justify-center relative">
+                                      <svg className="absolute inset-0 w-full h-full -rotate-90">
+                                         <circle 
+                                           cx="20" cy="20" r="18" 
+                                           className="stroke-blue-500/10 fill-none" 
+                                           strokeWidth="3" 
+                                         />
+                                         <motion.circle 
+                                           cx="20" cy="20" r="18" 
+                                           className="stroke-blue-500 fill-none" 
+                                           strokeWidth="3" 
+                                           strokeDasharray="113.1"
+                                           initial={{ strokeDashoffset: 0 }}
+                                           animate={{ strokeDashoffset: 113.1 - (113.1 * (timer / (currentQuestion.time_limit || 30))) }}
+                                         />
+                                      </svg>
+                                      <Clock className="w-4 h-4 text-blue-400 opacity-40" />
+                                   </div>
+                                </div>
+                             </div>
+    
+                             <div className="relative z-10">
+                                <h2 className="text-3xl md:text-4xl font-black leading-tight tracking-tight uppercase max-w-2xl">{currentQuestion.content || currentQuestion.question_text}</h2>
+                             </div>
+                          </div>
+    
+                          {showOptions ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                               {currentQuestion.options?.map((opt, idx) => {
+                                   const bgColors = ['bg-blue-600', 'bg-red-600', 'bg-amber-600', 'bg-emerald-600'];
+                                   const labels = ['A', 'B', 'C', 'D'];
+                                   return (
+                                      <motion.div 
+                                        key={idx}
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1, transition: { delay: idx * 0.1 } }}
+                                        className="flex items-center gap-6 p-6 bg-white/5 border border-white/10 rounded-[32px] shadow-xl relative overflow-hidden"
+                                      >
+                                         <div className={`${bgColors[idx]} w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg relative z-10 text-white`}>
+                                            {labels[idx]}
+                                         </div>
+                                         <span className="text-lg md:text-xl font-bold tracking-tight text-white/80 relative z-10">{opt}</span>
+                                      </motion.div>
+                                   )
+                               })}
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center p-20 bg-white/5 border border-dashed border-white/10 rounded-[56px] animate-pulse space-y-4">
+                               <div className="flex items-center gap-4 text-primary-blue text-[11px] font-black uppercase tracking-[0.5em]">
+                                  <Zap className="animate-bounce" />
+                                  <span>BROADCAST SYNC IN PROGRESS</span>
+                               </div>
+                            </div>
+                          )}
+                        </>
                       )}
-                   </motion.div>
-                )}
+                 )}
 
                 {status === 'showing-results' && currentQuestion && (
                    <motion.div

@@ -199,6 +199,7 @@ export default function CandidatePlayPage() {
 
   const [startTime, setStartTime] = useState(null);
   const [showOptions, setShowOptions] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (quiz?.status === 'showing-question') {
@@ -214,44 +215,42 @@ export default function CandidatePlayPage() {
   }, [quiz?.status, quiz?.current_question_index]);
 
   const handleSelect = async (optionIndex) => {
-    if (selectedOption !== null || quiz?.status !== 'showing-question' || !currentQuestion) return;
+    if (quiz?.status !== 'showing-question' || !currentQuestion || isSubmitting) return;
     
+    setIsSubmitting(true);
     const elapsed = (Date.now() - startTime) / 1000;
     setSelectedOption(optionIndex);
     
     const answer = String.fromCharCode(65 + optionIndex); // A, B, C, D
+    const isCorrect = answer === currentQuestion.correct_answer;
     
     // Calculate score with Response-Time Decay logic
-    const isCorrect = answer === currentQuestion.correct_answer;
-    if (isCorrect) {
-      const timeLimit = currentQuestion.time_limit || 15;
-      const basePoints = timeLimit * 10;
-      const penalty = Math.floor(elapsed);
-      const pointsEarned = Math.max(10, basePoints - (penalty * 10));
-      
-      setScore(prev => prev + pointsEarned);
+    const timeLimit = currentQuestion.time_limit || 15;
+    const basePoints = timeLimit * 10;
+    const penalty = Math.floor(elapsed);
+    const pointsEarned = isCorrect ? Math.max(10, basePoints - (penalty * 10)) : 0;
+    
+    try {
+      // 1. Clear any previous submission for this question to allow re-selection
+      await supabase
+        .from('submissions')
+        .delete()
+        .match({ quiz_id: quiz.id, user_id: user.id, question_id: currentQuestion.id });
 
-      // Save answer to Supabase
+      // 2. Save new answer to Supabase
       await supabase.from('submissions').insert([{
         quiz_id: quiz.id,
         user_id: user.id,
         question_id: currentQuestion.id,
         answer: answer,
-        is_correct: true,
+        is_correct: isCorrect,
         points: pointsEarned,
         time_taken: elapsed
       }]);
-    } else {
-      // Save incorrect answer
-      await supabase.from('submissions').insert([{
-        quiz_id: quiz.id,
-        user_id: user.id,
-        question_id: currentQuestion.id,
-        answer: answer,
-        is_correct: false,
-        points: 0,
-        time_taken: elapsed
-      }]);
+    } catch (err) {
+      console.error("Failed to save answer:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -321,7 +320,7 @@ export default function CandidatePlayPage() {
   }
 
   return (
-    <div className="h-screen bg-[#F0F2F5] flex flex-col p-4 space-y-4 overflow-hidden relative">
+    <div className="h-screen bg-[#F0F2F5] flex flex-col p-4 space-y-4 overflow-y-auto md:overflow-hidden relative">
       <SentinelProtocol 
          active={quiz?.status === 'showing-question'} 
          onViolation={async (count, type) => {
@@ -371,7 +370,7 @@ export default function CandidatePlayPage() {
           </div>
        </div>
 
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 relative z-30">
            <AnimatePresence mode="wait">
               {quiz?.status === 'showing-question' && showOptions ? (
                  <>
@@ -383,24 +382,32 @@ export default function CandidatePlayPage() {
                        return (
                          <motion.button
                            key={idx}
-                           initial={{ opacity: 0 }}
-                           animate={{ opacity: 1 }}
-                           whileTap={{ scale: 0.98 }}
-                           disabled={selectedOption !== null}
+                           initial={{ opacity: 0, scale: 0.95 }}
+                           animate={{ opacity: 1, scale: 1 }}
+                           whileTap={{ scale: 0.97 }}
+                           disabled={isSubmitting}
                            onClick={() => handleSelect(idx)}
-                           className={`relative rounded-[32px] flex flex-col items-center justify-center text-white transition-all overflow-hidden p-6 text-center group/opt ${
-                             selectedOption === idx ? 'ring-4 ring-primary-blue/10' : 
-                             selectedOption !== null ? 'opacity-30' : ''
+                           className={`relative rounded-[28px] md:rounded-[32px] flex flex-col items-center justify-center text-white transition-all overflow-hidden p-6 text-center group/opt cursor-pointer touch-manipulation z-40 ${
+                             selectedOption === idx ? 'ring-4 ring-white/50 shadow-2xl' : 
+                             selectedOption !== null ? 'opacity-60 hover:opacity-100 grayscale-[0.3] hover:grayscale-0' : ''
                            } ${colors[idx]} shadow-lg`}
                          >
-                            <div className="relative z-10 flex flex-col items-center gap-3">
-                               <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center text-xl font-black mb-1 border border-white/30">
+                            <div className="relative z-10 flex flex-col items-center gap-3 pointer-events-none">
+                               <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center text-lg md:text-xl font-black mb-1 border border-white/30">
                                   {labels[idx]}
                                </div>
-                               <span className="text-base md:text-lg font-black tracking-tight leading-tight max-w-[200px]">
+                               <span className="text-sm md:text-base lg:text-lg font-black tracking-tight leading-tight max-w-[200px]">
                                  {optionText}
                                </span>
                             </div>
+                            
+                            {selectedOption === idx && (
+                               <motion.div 
+                                 initial={{ scale: 0 }}
+                                 animate={{ scale: 1.5 }}
+                                 className="absolute inset-0 bg-white/10 rounded-full"
+                               />
+                            )}
                          </motion.button>
                        );
                      })}
