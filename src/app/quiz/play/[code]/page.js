@@ -15,7 +15,8 @@ import {
   XCircle,
   Fingerprint,
   Monitor,
-  MonitorOff
+  MonitorOff,
+  CircleCheck
 } from "lucide-react";
 
 export default function CandidatePlayPage() {
@@ -30,6 +31,7 @@ export default function CandidatePlayPage() {
   const [user, setUser] = useState(null);
   const [resultsActive, setResultsActive] = useState(false);
   const [score, setScore] = useState(0);
+  const [leaderboard, setLeaderboard] = useState([]);
 
   useEffect(() => {
     let channel;
@@ -72,7 +74,12 @@ export default function CandidatePlayPage() {
           sessionName = `Guest-${sessionUser.id.split('-')[1]}`;
         }
 
-        // Initialize Channel
+        // Initialize Channel - Remove any existing instance first to prevent callback conflicts
+        const existingChannel = supabase.getChannels().find(c => c.name === `quiz_session_${code.toUpperCase()}`);
+        if (existingChannel) {
+          await supabase.removeChannel(existingChannel);
+        }
+        
         channel = supabase.channel(`quiz_session_${code.toUpperCase()}`);
         
         channel
@@ -95,6 +102,14 @@ export default function CandidatePlayPage() {
               setResultsActive(false);
             }
           )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'submissions', filter: `quiz_id=eq.${quizData.id}` },
+            () => {
+               fetchScore(quizData.id, sessionUser.id);
+               fetchLeaderboard(quizData.id);
+            }
+          )
           .subscribe(async (status) => {
             if (status === 'SUBSCRIBED') {
               console.log("SYNCHRONIZED WITH NODE CHANNEL");
@@ -105,6 +120,10 @@ export default function CandidatePlayPage() {
               });
             }
           });
+
+        // Initial score load
+        fetchScore(quizData.id, sessionUser.id);
+        fetchLeaderboard(quizData.id);
 
         setLoading(false);
       } catch (err) {
@@ -121,6 +140,28 @@ export default function CandidatePlayPage() {
       }
     };
   }, [code]);
+
+  const fetchLeaderboard = async (quizId) => {
+    const { data } = await supabase
+      .from('leaderboard_view')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .order('total_score', { ascending: false });
+    if (data) setLeaderboard(data);
+  };
+
+  const fetchScore = async (quizId, userId) => {
+    const { data } = await supabase
+      .from('submissions')
+      .select('points')
+      .eq('quiz_id', quizId)
+      .eq('user_id', userId);
+    
+    if (data) {
+      const total = data.reduce((acc, sub) => acc + (sub.points || 0), 0);
+      setScore(total);
+    }
+  };
 
   useEffect(() => {
     if (quiz && quiz.questions && quiz.current_question_index !== undefined) {
@@ -151,7 +192,6 @@ export default function CandidatePlayPage() {
     const elapsed = (Date.now() - startTime) / 1000;
     setSelectedOption(optionIndex);
     
-    // In a real app, record the answer to Supabase immediately
     const answer = String.fromCharCode(65 + optionIndex); // A, B, C, D
     
     // Calculate score with Response-Time Decay logic
@@ -159,9 +199,6 @@ export default function CandidatePlayPage() {
     if (isCorrect) {
       const timeLimit = currentQuestion.time_limit || 15;
       const basePoints = timeLimit * 10;
-      // Formula: (time_limit - floor(elapsed)) * 10
-      // If elapsed is 0.5s (1st second), penalty is 0 -> 150pts
-      // If elapsed is 1.5s (2nd second), penalty is 1 -> 140pts
       const penalty = Math.floor(elapsed);
       const pointsEarned = Math.max(10, basePoints - (penalty * 10));
       
@@ -256,13 +293,36 @@ export default function CandidatePlayPage() {
     );
   }
 
-  // Active Play Mode
   return (
     <div className="h-screen bg-[#F0F2F5] flex flex-col p-6 space-y-6 overflow-hidden relative">
       <SentinelProtocol 
          active={quiz?.status === 'showing-question'} 
-         onViolation={(count, type) => {
+         onViolation={async (count, type) => {
            console.warn(`INTEGRITY ALERT: ${type} breach count ${count}`);
+           const channel = supabase.channel(`quiz_session_${code.toUpperCase()}`);
+           await channel.send({
+             type: 'broadcast',
+             event: 'violation_detected',
+             payload: {
+               userId: user.id,
+               userName: user.email || 'Candidate',
+               type,
+               count,
+               timestamp: new Date().toISOString()
+             }
+           });
+         }}
+         onTermination={async () => {
+             const channel = supabase.channel(`quiz_session_${code.toUpperCase()}`);
+             await channel.send({
+               type: 'broadcast',
+               event: 'session_terminated',
+               payload: {
+                 userId: user.id,
+                 userName: user.email || 'Candidate',
+                 timestamp: new Date().toISOString()
+               }
+             });
          }}
        />
        
@@ -282,7 +342,6 @@ export default function CandidatePlayPage() {
           </div>
        </div>
 
-       {/* Options Grid - NO QUESTION TEXT PERMITTED */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
            <AnimatePresence mode="wait">
               {quiz?.status === 'showing-question' && showOptions ? (
@@ -312,7 +371,7 @@ export default function CandidatePlayPage() {
                            } ${colors[idx]} shadow-2xl`}
                          >
                             <span className="text-8xl font-black opacity-10 absolute inset-0 flex items-center justify-center scale-[3] pointer-events-none group-hover/opt:scale-[4] transition-transform duration-700">
-                              {labels[idx]}
+                               {labels[idx]}
                             </span>
                             
                             <div className="relative z-10 flex flex-col items-center gap-4">
@@ -351,6 +410,49 @@ export default function CandidatePlayPage() {
                    <h2 className="text-3xl font-black text-[#0F172A] uppercase tracking-tighter mb-4">Read the Question</h2>
                    <p className="text-[18px] font-black text-[#94A3B8] uppercase tracking-[0.4em] max-w-sm">Data Injection sequence initialized. Synchronize with the primary broadcast terminal for intelligence gathering.</p>
                 </div>
+              ) : quiz?.status === 'showing-results' ? (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="col-span-full bg-white rounded-[40px] border border-[#E2E8F0] shadow-2xl flex flex-col overflow-hidden relative"
+                  >
+                     <div className={`p-10 flex flex-col items-center justify-center text-center ${
+                       currentQuestion?.correct_answer === String.fromCharCode(65 + selectedOption) ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                     }`}>
+                        <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 ${
+                          currentQuestion?.correct_answer === String.fromCharCode(65 + selectedOption) ? 'bg-emerald-500 text-white shadow-[0_0_30px_rgba(16,185,129,0.4)]' : 'bg-rose-500 text-white shadow-[0_0_30px_rgba(244,63,94,0.4)]'
+                        }`}>
+                           {currentQuestion?.correct_answer === String.fromCharCode(65 + selectedOption) ? <CircleCheck size={48} strokeWidth={2.5} /> : <XCircle size={48} strokeWidth={2.5} />}
+                        </div>
+                        <h2 className="text-4xl font-black uppercase tracking-tighter mb-2">
+                           {currentQuestion?.correct_answer === String.fromCharCode(65 + selectedOption) ? 'ACCURACY CONFIRMED' : 'INTELLIGENCE GAP'}
+                        </h2>
+                        <p className="text-[13px] font-black uppercase tracking-[0.3em] opacity-60">Question synchronization complete</p>
+                     </div>
+
+                     <div className="grid grid-cols-2 border-t border-[#E2E8F0]">
+                        <div className="p-8 border-r border-[#E2E8F0] flex flex-col items-center justify-center bg-slate-50/50">
+                           <div className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.4em] mb-4">Neural Rank</div>
+                           <div className="flex items-end gap-1">
+                              <span className="text-5xl font-black text-[#0F172A] leading-none">#{leaderboard.findIndex(p => p.user_id === user?.id) + 1 || '--'}</span>
+                           </div>
+                        </div>
+                        <div className="p-8 flex flex-col items-center justify-center bg-white">
+                           <div className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.4em] mb-4">Current Score</div>
+                           <div className="flex items-end gap-1">
+                              <span className="text-5xl font-black text-primary-blue leading-none">{score}</span>
+                              <span className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">PTS</span>
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="p-8 bg-[#0F172A] text-white flex flex-col items-center justify-center text-center">
+                        <div className="text-[9px] font-black text-white/40 uppercase tracking-[0.5em] mb-3">Target Reference</div>
+                        <div className="px-6 py-3 rounded-full bg-white/10 border border-white/20 text-sm font-black uppercase tracking-widest">
+                           {currentQuestion?.options?.[currentQuestion?.correct_answer.charCodeAt(0) - 65] || "DATA_MISSING"}
+                        </div>
+                     </div>
+                  </motion.div>
               ) : (
                 <div className="col-span-full bg-white rounded-[40px] border border-[#E2E8F0] border-dashed flex flex-col items-center justify-center p-12 text-center">
                    <MonitorOff className="text-[#94A3B8] w-16 h-16 mb-6 animate-pulse" />
