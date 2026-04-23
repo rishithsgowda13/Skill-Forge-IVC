@@ -15,7 +15,8 @@ import {
   ShieldCheck,
   Zap,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Lock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -137,6 +138,8 @@ export default function ResearchPage() {
     </div>
   );
 
+  const totalChars = Object.values(researchData).reduce((acc, val) => acc + val.length, 0);
+  const requiredChars = RESEARCH_BLOCKS.reduce((acc, val) => acc + val.min, 0);
   const isProtocolComplete = RESEARCH_BLOCKS.every(block => researchData[block.id].length >= block.min);
 
   return (
