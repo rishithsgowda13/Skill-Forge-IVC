@@ -30,32 +30,18 @@ export async function proxy(request) {
     },
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // Use getSession() instead of getUser() for much faster middleware performance
+  // getSession() checks the local token, while getUser() always hits the network
+  const { data: { session } } = await supabase.auth.getSession();
   const mockSession = request.cookies.get("mock_session")?.value;
   const isMockUser = mockSession === "user";
   const isMockAdmin = mockSession === "admin";
-  const isAuthenticated = !!user || isMockUser || isMockAdmin;
+  const isAuthenticated = !!session || isMockUser || isMockAdmin;
 
   const path = request.nextUrl.pathname;
 
-  // Skip middleware for static assets
-  if (
-    path.startsWith("/_next") ||
-    path.startsWith("/api") ||
-    path.startsWith("/favicon.ico") ||
-    path.includes(".svg") ||
-    path.includes(".png") ||
-    path.includes(".jpg") ||
-    path.includes(".jpeg")
-  ) {
-    return response;
-  }
-
   // Auth/Redirect logic
-  // The root path '/' is now the login page
-  const isAuthPage = path === "/";
-  const isAuthCallback = path === "/auth/callback";
-  const isAdminRoute = path.startsWith("/admin") || path.startsWith("/quiz/admin");
+  const isAdminRoute = path.startsWith("/quiz/admin") || path.startsWith("/admin");
   const isProtectedRoute = path.startsWith("/quiz") || path.startsWith("/dashboard") || isAdminRoute;
 
   // Redirect legacy /login to root
@@ -64,33 +50,20 @@ export async function proxy(request) {
   }
 
   // Redirect to root if not authenticated and trying to access protected route
-  if (!isAuthenticated && isProtectedRoute && !isAuthCallback) {
+  if (!isAuthenticated && isProtectedRoute && path !== "/auth/callback") {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Redirect to dashboard if already authenticated and trying to access login/root
-  // Temporarily disabled to allow viewing the login page directly
-  /*
-  if (isAuthenticated && isAuthPage) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-  */
+  // Admin access control - Only run DB check on admin routes to save performance
+  if (isAdminRoute && !isMockAdmin && session?.user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", session.user.id)
+      .single();
 
-  // Admin access control
-  if (isAdminRoute && !isMockAdmin) {
-    // If not mock admin, check Supabase role
-    if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (profile?.role !== "admin" && profile?.role !== "evaluator") {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-    } else {
-      return NextResponse.redirect(new URL("/", request.url));
+    if (profile?.role !== "admin" && profile?.role !== "evaluator") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
 
@@ -98,5 +71,14 @@ export async function proxy(request) {
 }
 
 export const config = {
-  matcher: "/:path*",
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files with extensions (.svg, .png, .jpg, .jpeg, .webp)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp)$).*)',
+  ],
 };

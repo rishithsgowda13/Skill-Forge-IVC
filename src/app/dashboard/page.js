@@ -99,19 +99,10 @@ export default function DashboardPage() {
 
     loadData();
 
-    // Subscribe to submission and profile changes globally
-    const channel = supabase
-      .channel("global-sync")
-      .on("postgres_changes", { event: "*", schema: "public", table: "submissions" }, () => {
-        loadData();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
-        loadData();
-      })
-      .subscribe();
+    loadData();
 
     return () => {
-      supabase.removeChannel(channel);
+      // Cleanup logic if needed
     };
   }, []);
 
@@ -302,23 +293,23 @@ export default function DashboardPage() {
   if (!isMounted) return null;
 
   return (
-    <div className="flex flex-col p-6 md:p-10 space-y-8">
-      <header className="flex justify-between items-start mb-8 w-full">
+    <div className="flex flex-col p-4 md:p-6 space-y-6">
+      <header className="flex justify-between items-start mb-6 w-full">
         <div className="space-y-1">
-          <h2 className="text-3xl md:text-4xl font-black text-[#0F172A] tracking-tighter uppercase leading-none">
+          <h2 className="text-xl md:text-2xl font-black text-[#0F172A] tracking-tighter uppercase leading-none">
             CONTROL <span className="text-[#2563EB]">CENTER</span>
           </h2>
-          <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.3em]">
-            Authorized Station Analysis Protocol
+          <p className="text-[8px] font-black text-[#94A3B8] uppercase tracking-[0.3em]">
+            Station Analysis Protocol
           </p>
         </div>
 
         {(role === "admin" || role === "evaluator") && (
           <button 
             onClick={() => router.push('/quiz')}
-            className="bg-[#2563EB] text-white px-6 py-3 rounded-xl font-black text-[10px] tracking-widest uppercase flex items-center gap-3 shadow-[0_12px_35px_rgba(37,99,235,0.25)] hover:bg-[#1E40AF] transition-all active:scale-[0.98] group"
+            className="bg-[#2563EB] text-white px-5 py-2.5 rounded-lg font-black text-[8px] tracking-widest uppercase flex items-center gap-2 shadow-lg hover:bg-[#1E40AF] transition-all active:scale-[0.98] group"
           >
-            <Zap size={20} className="group-hover:translate-x-1.5 transition-transform" />
+            <Zap size={14} className="group-hover:translate-x-1 transition-transform" />
             <span>Initialize Session</span>
           </button>
         )}

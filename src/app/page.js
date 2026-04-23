@@ -8,10 +8,8 @@ import {
   Zap, 
   Lock,
   Loader2,
-  Users,
   Mail,
-  Activity,
-  ChevronRight
+  Activity
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -34,7 +32,6 @@ export default function LoginPage() {
     setIsMounted(true);
     setError(null);
     
-    // Global Scroll Lockdown
     document.documentElement.classList.add("no-scroll");
     document.body.classList.add("no-scroll");
     
@@ -50,7 +47,6 @@ export default function LoginPage() {
     setError(null);
     setSuccessMessage(null);
 
-    // Mock bypass logic - ONLY for basic testing, default to user
     if (!isSignUp) {
       if (email === "1" && password === "1") {
         document.cookie = "mock_session=user:1; path=/";
@@ -70,15 +66,12 @@ export default function LoginPage() {
         return;
       }
       
-      // Admin bypasses removed per security protocol request
-
       const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { 
         setError(error.message.toUpperCase()); 
         setLoading(false); 
       }
       else { 
-        // Redirect based on role from database
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
@@ -93,12 +86,11 @@ export default function LoginPage() {
       }
     } else {
       if (password !== confirmPassword) {
-        setError("Security keys do not match.");
+        setError("Keys do not match.");
         setLoading(false);
         return;
       }
 
-      // Every account registered through UI is strictly a 'candidate'
       const { data: authData, error } = await supabase.auth.signUp({
         email,
         password,
@@ -109,15 +101,10 @@ export default function LoginPage() {
       });
 
       if (error) { 
-        if (error.message.includes("Signups not allowed")) {
-          setError("PROTOCOL ARCHIVE ERROR: System administrator has currently locked new node registrations.");
-        } else {
-          setError(error.message.toUpperCase()); 
-        }
+        setError(error.message.toUpperCase());
         setLoading(false); 
       }
       else if (authData.user) { 
-        // Sync to public profiles table as a 'candidate'
         await supabase.from('profiles').insert([{
           id: authData.user.id,
           full_name: fullName,
@@ -126,231 +113,189 @@ export default function LoginPage() {
           created_at: new Date().toISOString()
         }]);
 
-        setSuccessMessage("SYNCHRONIZATION COMPLETE: Node established as Candidate Station."); 
+        setSuccessMessage("Sync Complete: Node established."); 
         setLoading(false); 
       }
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` }
-    });
-    if (error) { setError(error.message); setLoading(false); }
-  };
-
-  const toggleMode = () => setIsSignUp(!isSignUp);
-
   if (!isMounted) return null;
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-[#f8fafc] flex items-center justify-center p-4 md:p-8 font-sans selection:bg-blue-100 overflow-hidden overscroll-none relative">
-      {/* Background Ambience */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-blue-500/5 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute -bottom-[20%] -right-[10%] w-[60%] h-[60%] bg-indigo-500/5 rounded-full blur-[120px] animate-pulse delay-1000" />
-      </div>
-
+    <div className="fixed inset-0 w-full h-full bg-[#f8fafc] flex items-center justify-center p-4 font-sans selection:bg-blue-100 overflow-hidden relative">
       <motion.div
         layout
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-[840px] max-h-[90vh] bg-white rounded-[10px] shadow-[0_40px_100px_-25px_rgba(0,0,0,0.08)] border border-slate-200 overflow-hidden relative z-10 flex"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="w-full max-w-[780px] max-h-[85vh] bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden relative z-10 flex"
       >
-        {/* Sliding Branding Panel */}
         <AnimatePresence mode="wait">
           <motion.div 
             key={isSignUp ? "signup-branding" : "login-branding"}
-            initial={{ opacity: 0, x: isSignUp ? 40 : -40 }}
+            initial={{ opacity: 0, x: isSignUp ? 20 : -20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: isSignUp ? 40 : -40 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className={`hidden lg:flex bg-[#2563EB] text-white absolute top-0 bottom-0 z-20 w-[300px] flex-col justify-between p-8 ${isSignUp ? "right-0" : "left-0"}`}
+            exit={{ opacity: 0, x: isSignUp ? 20 : -20 }}
+            className={`hidden lg:flex bg-[#2563EB] text-white absolute top-0 bottom-0 z-20 w-[260px] flex-col justify-between p-6 ${isSignUp ? "right-0" : "left-0"}`}
           >
             <div className="relative z-10 flex flex-col h-full">
-              <div className="flex items-center gap-3 mb-10 group">
-                <div className="w-9 h-9 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/20 group-hover:bg-white group-hover:text-blue-600 transition-all duration-500">
-                  <ShieldCheck size={20} />
+              <div className="flex items-center gap-2 mb-8 group">
+                <div className="w-8 h-8 bg-white/10 backdrop-blur-md rounded-lg flex items-center justify-center border border-white/20">
+                  <ShieldCheck size={16} />
                 </div>
-                <h1 className="text-base font-black tracking-tighter uppercase leading-none">Skill Forge</h1>
+                <h1 className="text-xs font-black tracking-tighter uppercase leading-none">Skill Forge</h1>
               </div>
-
-              <div className="flex-1 flex flex-col justify-center space-y-10 py-6">
-                <div className="space-y-3">
-                  <h2 className="text-3xl font-black leading-[0.9] tracking-tighter uppercase">
+ 
+              <div className="flex-1 flex flex-col justify-center space-y-8 py-4">
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-black leading-[0.9] tracking-tighter uppercase">
                     {isSignUp ? "Connect\nNode" : "System\nSync"}
                   </h2>
-                  <p className="text-blue-100/70 text-[10.5px] font-medium leading-relaxed max-w-[200px]">
-                    {isSignUp 
-                      ? "Establish your node presence in the NEXUS protocol layers."
-                      : "Synchronize your authorization keys for secure node access."}
+                  <p className="text-blue-100/70 text-[9px] font-medium leading-relaxed max-w-[180px]">
+                    Establish node presence in the NEXUS layers.
                   </p>
                 </div>
-
-                <div className="space-y-4">
+ 
+                <div className="space-y-3">
                   {[
                     { icon: Zap, text: "Instant Validation" },
-                    { icon: Lock, text: "Military Grade Encryption" },
-                    { icon: Activity, text: "Biometric Identity Nodes" }
+                    { icon: Lock, text: "Military Grade" },
+                    { icon: Activity, text: "Biometric Nodes" }
                   ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-4 group/item">
-                      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10 group-hover/item:bg-white/10 transition-colors">
-                        <item.icon size={13} className="text-blue-300" />
+                    <div key={i} className="flex items-center gap-3 group/item">
+                      <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
+                        <item.icon size={11} className="text-blue-300" />
                       </div>
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/80">{item.text}</span>
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/80">{item.text}</span>
                     </div>
                   ))}
                 </div>
               </div>
-
-              <div className="mt-auto space-y-6 pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-6 h-px bg-white/20" />
-                  <span className="text-[8.5px] font-black uppercase tracking-[0.4em] text-white/30">Protocol 4.2.0-S</span>
-                </div>
-                <div className="flex gap-6 text-[10px] font-black uppercase tracking-widest text-white/30">
-                  <span className="hover:text-white cursor-pointer transition-colors">Privacy</span>
-                  <span className="hover:text-white cursor-pointer transition-colors">Support</span>
+ 
+              <div className="mt-auto pt-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-px bg-white/20" />
+                  <span className="text-[7.5px] font-black uppercase tracking-[0.4em] text-white/30">Protocol 4.2.0-S</span>
                 </div>
               </div>
             </div>
-
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-900 overflow-hidden">
-               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-10">
-                  <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <path d="M0 0 L100 100 M100 0 L0 100" stroke="white" strokeWidth="0.1" />
-                  </svg>
-               </div>
-            </div>
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-900" />
           </motion.div>
         </AnimatePresence>
-
-        {/* Content Area */}
-        <div 
-          className={`flex-1 flex flex-col justify-center transition-all duration-700 ease-in-out px-6 md:px-10 py-6 md:py-7 relative overflow-y-auto custom-scrollbar ${isSignUp ? "lg:mr-[300px]" : "lg:ml-[300px]"}`}
-        >
-          {/* Mobile Aesthetic Elements */}
-          <div className="lg:hidden absolute top-[-10%] right-[-10%] w-[60%] h-[40%] bg-blue-600/5 blur-[100px] pointer-events-none" />
-          <div className="lg:hidden absolute bottom-[-5%] left-[-10%] w-[50%] h-[30%] bg-indigo-600/5 blur-[100px] pointer-events-none" />
-          
-          <div className="max-w-[650px] mx-auto w-full space-y-3 md:space-y-4 flex flex-col items-center relative z-10">
-            <div className="w-full space-y-4 text-center flex flex-col items-center">
-              <div className="lg:hidden flex items-center justify-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-blue-600 rounded-[18px] flex items-center justify-center text-white shadow-xl shadow-blue-200">
-                  <ShieldCheck size={24} />
+ 
+        <div className={`flex-1 flex flex-col justify-center px-6 md:px-8 py-6 relative overflow-y-auto custom-scrollbar ${isSignUp ? "lg:mr-[260px]" : "lg:ml-[260px]"}`}>
+          <div className="max-w-[450px] mx-auto w-full space-y-4 flex flex-col items-center relative z-10">
+            <div className="w-full text-center flex flex-col items-center">
+              <div className="lg:hidden flex items-center justify-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white">
+                  <ShieldCheck size={20} />
                 </div>
                 <div className="text-left">
-                  <span className="text-lg font-black uppercase tracking-tighter text-slate-900 leading-none block">Skill Forge</span>
-                  <span className="text-[11px] font-black uppercase tracking-[0.3em] text-blue-600/60 leading-none mt-1 block">Nexus Node</span>
+                  <span className="text-base font-black uppercase tracking-tighter text-slate-900 leading-none block">Skill Forge</span>
+                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-600/60 leading-none mt-1 block">Nexus Node</span>
                 </div>
               </div>
-              <div className="space-y-2">
-                <p className="hidden lg:block text-xs font-black text-blue-600 uppercase tracking-[0.5em] mb-2">Innovators and Visionaries Club</p>
-                <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none">
+              <div className="space-y-1">
+                <p className="hidden lg:block text-[9px] font-black text-blue-600 uppercase tracking-[0.4em] mb-1">Innovators and Visionaries</p>
+                <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tighter uppercase leading-none">
                   {isSignUp ? "Initialize" : "Welcome"}
                 </h1>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] leading-tight">Synchronize your identification parameters</p>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Identification Parameters Sync</p>
               </div>
             </div>
 
-            {/* Role/Action UI - Unified Candidate Protocol */}
-            <div className="space-y-4 w-full">
-
-              <form onSubmit={handleAuth} className="space-y-4">
-                {isSignUp && (
-                  <div className="space-y-1 text-left">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Authorized Name</label>
-                    <input 
-                      required
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Enter Node Identity Name"
-                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-2.5 px-5 text-[13px] font-bold text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all"
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-1 text-left">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Node Credentials</label>
-                  <div className="relative group">
-                    <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
-                    <input 
-                      required
-                      type="text"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="authorized@skillforge.io"
-                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-2.5 pl-12 pr-5 text-[13px] font-bold text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1 text-left">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Security Protocol Key</label>
-                  <div className="relative group">
-                    <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
-                    <input 
-                      required
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-2.5 pl-12 pr-5 text-[13px] font-bold text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all"
-                    />
-                  </div>
-                </div>
-
-                {isSignUp && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Confirm Key</label>
-                    <input 
-                      required
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-2.5 px-5 text-[13px] font-bold text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all"
-                    />
-                  </div>
-                )}
-
-                <button
-                  disabled={loading}
-                  className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-black text-[10px] tracking-[0.3em] uppercase shadow-lg shadow-blue-100 hover:bg-blue-700 hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 group"
-                >
-                  {loading ? <Loader2 className="animate-spin" /> : (
-                    <>
-                      <span>{isSignUp ? "Initialize Sync" : "Establish Link"}</span>
-                      <ArrowRight size={20} className="group-hover:translate-x-1.5 transition-transform" />
-                    </>
-                  )}
-                </button>
-
-                {error && (
-                  <p className="text-sm font-black text-rose-500 uppercase tracking-widest text-center pt-2 leading-relaxed italic">{error}</p>
-                )}
-                {successMessage && (
-                  <p className="text-sm font-black text-emerald-500 uppercase tracking-widest text-center pt-2 leading-relaxed italic">{successMessage}</p>
-                )}
-
-              </form>
-
-              <div className="text-center pt-4 flex flex-col items-center">
-                <div className="flex items-center gap-3 text-[12px] font-black text-slate-300 uppercase tracking-widest leading-relaxed">
-                  <span>{isSignUp ? "Already Enrolled?" : "New Node Signature?"}</span>
-                  <button 
-                    type="button"
-                    onClick={() => setIsSignUp(!isSignUp)}
-                    className="text-blue-600 hover:text-blue-700 transition-colors cursor-pointer font-extrabold underline decoration-2 underline-offset-4"
-                  >
-                    {isSignUp ? "Sync Credentials" : "Enroll Node"}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <div className="space-y-3 w-full">
+               <form onSubmit={handleAuth} className="space-y-3">
+                 {isSignUp && (
+                   <div className="space-y-1 text-left">
+                     <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1.5">Authorized Name</label>
+                     <input 
+                       required
+                       type="text"
+                       value={fullName}
+                       onChange={(e) => setFullName(e.target.value)}
+                       placeholder="Enter Node Identity Name"
+                       className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2 px-4 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                     />
+                   </div>
+                 )}
+ 
+                 <div className="space-y-1 text-left">
+                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1.5">Node Credentials</label>
+                   <div className="relative group">
+                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
+                     <input 
+                       required
+                       type="text"
+                       value={email}
+                       onChange={(e) => setEmail(e.target.value)}
+                       placeholder="authorized@skillforge.io"
+                       className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2 pl-10 pr-4 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                     />
+                   </div>
+                 </div>
+ 
+                 <div className="space-y-1 text-left">
+                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1.5">Security Protocol Key</label>
+                   <div className="relative group">
+                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
+                     <input 
+                       required
+                       type="password"
+                       value={password}
+                       onChange={(e) => setPassword(e.target.value)}
+                       placeholder="••••••••••••"
+                       className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2 pl-10 pr-4 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                     />
+                   </div>
+                 </div>
+ 
+                 {isSignUp && (
+                   <div className="space-y-1">
+                     <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1.5">Confirm Key</label>
+                     <input 
+                       required
+                       type="password"
+                       value={confirmPassword}
+                       onChange={(e) => setConfirmPassword(e.target.value)}
+                       placeholder="••••••••••••"
+                       className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2 px-4 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                     />
+                   </div>
+                 )}
+ 
+                 <button
+                   disabled={loading}
+                   className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-black text-[8px] tracking-[0.3em] uppercase shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 group"
+                 >
+                   {loading ? <Loader2 className="animate-spin" size={14} /> : (
+                     <>
+                       <span>{isSignUp ? "Initialize Sync" : "Establish Link"}</span>
+                       <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                     </>
+                   )}
+                 </button>
+ 
+                 {error && (
+                   <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center pt-1 leading-relaxed italic">{error}</p>
+                 )}
+                 {successMessage && (
+                   <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest text-center pt-1 leading-relaxed italic">{successMessage}</p>
+                 )}
+               </form>
+ 
+               <div className="text-center pt-2 flex flex-col items-center">
+                 <div className="flex items-center gap-2 text-[10px] font-black text-slate-300 uppercase tracking-widest leading-relaxed">
+                   <span>{isSignUp ? "Already Enrolled?" : "New Node?"}</span>
+                   <button 
+                     type="button"
+                     onClick={() => setIsSignUp(!isSignUp)}
+                     className="text-blue-600 hover:text-blue-700 transition-colors cursor-pointer font-extrabold"
+                   >
+                     {isSignUp ? "Sync Credentials" : "Enroll Node"}
+                   </button>
+                 </div>
+               </div>
+             </div>
           </div>
         </div>
       </motion.div>

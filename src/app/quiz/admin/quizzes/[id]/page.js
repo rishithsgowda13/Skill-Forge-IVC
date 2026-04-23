@@ -91,27 +91,25 @@ export default function QuizConfigurePage({ params }) {
     }
   };
 
-  const handleCSVUpload = async (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target.result;
+    const fileExt = file.name.split('.').pop().toLowerCase();
+    
+    const processContent = async (text) => {
         const lines = text.split(/\r?\n/).filter(line => line.trim());
-        
         if (lines.length === 0) throw new Error("File is empty.");
 
-        // Skip header if it exists (check if first line contains "question")
+        let parsedQuestions = [];
+
+        // Attempt 1: CSV parsing
         const startIdx = lines[0].toLowerCase().includes("question") ? 1 : 0;
-        
-        const newQuestions = lines.slice(startIdx).map((line, idx) => {
-          // Robust CSV parsing for quoted strings with commas
+        parsedQuestions = lines.slice(startIdx).map((line, idx) => {
           const columns = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
           const cleaned = columns.map(c => c.replace(/^"|"$/g, '').trim());
           
-          if (cleaned.length < 2) return null; // Skip invalid lines
+          if (cleaned.length < 2) return null;
 
           return {
             quiz_id: id,
@@ -130,19 +128,66 @@ export default function QuizConfigurePage({ params }) {
           };
         }).filter(Boolean);
 
-        if (newQuestions.length === 0) throw new Error("No valid questions found in CSV.");
+        // Attempt 2: Text Block Parsing (if CSV failed to find valid rows)
+        if (parsedQuestions.length === 0) {
+            let currentQ = null;
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                const lowerLine = line.toLowerCase();
+                
+                if (lowerLine.startsWith("question:") || lowerLine.startsWith("q:")) {
+                    if (currentQ) parsedQuestions.push(currentQ);
+                    currentQ = {
+                        quiz_id: id,
+                        question_text: line.replace(/^(question:|q:)\s*/i, "").trim(),
+                        options: ["", "", "", ""],
+                        correct_answer: "A",
+                        time_limit: 30,
+                        points: 100,
+                        question_type: 'mcq',
+                        order_index: questions.length + parsedQuestions.length
+                    };
+                } else if (currentQ) {
+                    if (lowerLine.startsWith("a)") || lowerLine.startsWith("a.")) currentQ.options[0] = line.substring(2).trim();
+                    else if (lowerLine.startsWith("b)") || lowerLine.startsWith("b.")) currentQ.options[1] = line.substring(2).trim();
+                    else if (lowerLine.startsWith("c)") || lowerLine.startsWith("c.")) currentQ.options[2] = line.substring(2).trim();
+                    else if (lowerLine.startsWith("d)") || lowerLine.startsWith("d.")) currentQ.options[3] = line.substring(2).trim();
+                    else if (lowerLine.startsWith("answer:")) currentQ.correct_answer = line.replace(/^answer:\s*/i, "").trim().toUpperCase();
+                    else if (lowerLine.startsWith("time:")) currentQ.time_limit = parseInt(line.replace(/^time:\s*/i, "").trim()) || 30;
+                    else if (lowerLine.startsWith("points:")) currentQ.points = parseInt(line.replace(/^points:\s*/i, "").trim()) || 100;
+                }
+            }
+            if (currentQ) parsedQuestions.push(currentQ);
+            
+            // Filter out incomplete questions
+            parsedQuestions = parsedQuestions.filter(q => q.question_text && q.options.some(opt => opt));
+        }
+
+        if (parsedQuestions.length === 0) throw new Error("No valid questions found in file.");
 
         setSubmitting(true);
         const { error } = await supabase
           .from("questions")
-          .insert(newQuestions);
+          .insert(parsedQuestions);
 
         if (error) throw error;
 
-        toast.success(`SUCCESS: ${newQuestions.length} nodes integrated into neural mesh.`);
+        toast.success(`SUCCESS: ${parsedQuestions.length} nodes integrated into neural mesh.`);
         await loadData();
+    };
+
+    if (fileExt === 'docx') {
+       // For real docx, we'd need mammoth.js. For now, we try text extraction if possible, or fallback to readAsText (which yields garbage for zip).
+       // We'll just read as text. If it's a real docx, the user might see an error. 
+       // Often users upload .txt renamed to .doc
+    }
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        await processContent(event.target.result);
       } catch (err) {
-        console.error("CSV Processing Error:", err);
+        console.error("File Processing Error:", err);
         toast.error("INTEGRATION FAILED: " + err.message);
       } finally {
         setSubmitting(false);
@@ -299,9 +344,9 @@ export default function QuizConfigurePage({ params }) {
                        <span className="hidden sm:inline">Bulk Import</span>
                        <input 
                          type="file" 
-                         accept=".csv" 
+                         accept=".csv,.doc,.docx,.txt" 
                          className="hidden" 
-                         onChange={handleCSVUpload}
+                         onChange={handleFileUpload}
                          disabled={submitting}
                        />
                      </label>

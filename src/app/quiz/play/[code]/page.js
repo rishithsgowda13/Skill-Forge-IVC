@@ -321,11 +321,10 @@ export default function CandidatePlayPage() {
   }
 
   return (
-    <div className="h-screen bg-[#F0F2F5] flex flex-col p-6 space-y-6 overflow-hidden relative">
+    <div className="h-screen bg-[#F0F2F5] flex flex-col p-4 space-y-4 overflow-hidden relative">
       <SentinelProtocol 
          active={quiz?.status === 'showing-question'} 
          onViolation={async (count, type) => {
-           console.warn(`INTEGRITY ALERT: ${type} breach count ${count}`);
            const channel = channelRef.current;
            if (channel) {
              await channel.send({
@@ -357,148 +356,124 @@ export default function CandidatePlayPage() {
          }}
        />
        
-       {/* Top Status Bar */}
-       <div className="flex items-center justify-between p-6 bg-white rounded-[32px] border border-[#E2E8F0] shadow-sm relative z-10">
-          <div className="flex items-center gap-4">
-             <div className="w-10 h-10 bg-primary-blue/10 rounded-xl flex items-center justify-center text-primary-blue">
-                <Zap size={20} />
+       <div className="flex items-center justify-between p-4 bg-white rounded-[24px] border border-[#E2E8F0] shadow-sm relative z-10">
+          <div className="flex items-center gap-3">
+             <div className="w-8 h-8 bg-primary-blue/10 rounded-lg flex items-center justify-center text-primary-blue">
+                <Zap size={16} />
              </div>
              <div>
-                <p className="text-[13.5px] font-black text-[#94A3B8] uppercase tracking-widest leading-none mb-1">Session Active</p>
-                <p className="text-sm font-black text-[#0F172A] uppercase">Node Sync Point {quiz.current_question_index + 1}</p>
+                <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest leading-none mb-1">Session Active</p>
+                <p className="text-xs font-black text-[#0F172A] uppercase">Sync Point {quiz.current_question_index + 1}</p>
              </div>
           </div>
-          <div className="bg-[#0F172A] text-white px-6 py-2.5 rounded-2xl text-xs font-black tracking-widest tabular-nums">
-             {score}
+          <div className="bg-[#0F172A] text-white px-4 py-2 rounded-xl text-[10px] font-black tracking-widest tabular-nums">
+             SCORE: {score}
           </div>
        </div>
 
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
            <AnimatePresence mode="wait">
               {quiz?.status === 'showing-question' && showOptions ? (
                  <>
                      {[0, 1, 2, 3].map((idx) => {
-                       const colors = [
-                         'bg-[#2563EB] shadow-blue-200',
-                         'bg-[#EF4444] shadow-red-200',
-                         'bg-[#F59E0B] shadow-amber-200',
-                         'bg-[#10B981] shadow-emerald-200'
-                       ];
+                       const colors = ['bg-[#2563EB]', 'bg-[#EF4444]', 'bg-[#F59E0B]', 'bg-[#10B981]'];
                        const labels = ['A', 'B', 'C', 'D'];
                        const optionText = currentQuestion?.options?.[idx] || labels[idx];
                        
                        return (
                          <motion.button
                            key={idx}
-                           initial={{ scale: 0.9, opacity: 0 }}
-                           animate={{ scale: 1, opacity: 1 }}
-                           exit={{ scale: 0.9, opacity: 0 }}
-                           whileTap={{ scale: 0.95 }}
+                           initial={{ opacity: 0 }}
+                           animate={{ opacity: 1 }}
+                           whileTap={{ scale: 0.98 }}
                            disabled={selectedOption !== null}
                            onClick={() => handleSelect(idx)}
-                           className={`relative rounded-[40px] flex flex-col items-center justify-center text-white transition-all overflow-hidden p-8 text-center group/opt ${
-                             selectedOption === idx ? 'ring-8 ring-primary-blue/20 scale-[0.98]' : 
-                             selectedOption !== null ? 'opacity-30 grayscale-[30%]' : ''
-                           } ${colors[idx]} shadow-2xl`}
+                           className={`relative rounded-[32px] flex flex-col items-center justify-center text-white transition-all overflow-hidden p-6 text-center group/opt ${
+                             selectedOption === idx ? 'ring-4 ring-primary-blue/10' : 
+                             selectedOption !== null ? 'opacity-30' : ''
+                           } ${colors[idx]} shadow-lg`}
                          >
-                            <span className="text-8xl font-black opacity-10 absolute inset-0 flex items-center justify-center scale-[3] pointer-events-none group-hover/opt:scale-[4] transition-transform duration-700">
-                               {labels[idx]}
-                            </span>
-                            
-                            <div className="relative z-10 flex flex-col items-center gap-4">
-                               <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl font-black mb-2 border border-white/30">
+                            <div className="relative z-10 flex flex-col items-center gap-3">
+                               <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center text-xl font-black mb-1 border border-white/30">
                                   {labels[idx]}
                                </div>
-                               <span className="text-xl md:text-2xl font-extrabold tracking-tight leading-tight max-w-[280px]">
+                               <span className="text-base md:text-lg font-black tracking-tight leading-tight max-w-[200px]">
                                  {optionText}
                                </span>
                             </div>
-
-                            {selectedOption === idx && (
-                               <div className="absolute top-8 right-8">
-                                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                     <CheckCircle2 className="w-10 h-10 text-white" />
-                                  </motion.div>
-                               </div>
-                            )}
                          </motion.button>
                        );
                      })}
                  </>
               ) : quiz?.status === 'showing-question' ? (
-                <div className="col-span-full bg-white/50 backdrop-blur-md rounded-[40px] border-4 border-dashed border-primary-blue/20 flex flex-col items-center justify-center p-12 text-center relative overflow-hidden animate-pulse">
-                   <div className="absolute top-0 left-0 w-full h-1 bg-primary-blue/20">
+                <div className="col-span-full bg-white/50 backdrop-blur-sm rounded-[32px] border-2 border-dashed border-primary-blue/10 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
+                   <div className="absolute top-0 left-0 w-full h-1 bg-primary-blue/10">
                       <motion.div 
                         initial={{ width: 0 }} 
                         animate={{ width: '100%' }} 
                         transition={{ duration: 3, ease: 'linear' }} 
-                        className="h-full bg-primary-blue shadow-[0_0_15px_rgba(37,99,235,0.5)]" 
+                        className="h-full bg-primary-blue" 
                       />
                    </div>
-                   <div className="w-20 h-20 bg-primary-blue/10 rounded-full flex items-center justify-center mb-6">
-                      <Clock className="text-primary-blue w-10 h-10 animate-spin-slow" />
+                   <div className="w-14 h-14 bg-primary-blue/10 rounded-full flex items-center justify-center mb-4">
+                      <Clock className="text-primary-blue w-6 h-6" />
                    </div>
-                   <h2 className="text-3xl font-black text-[#0F172A] uppercase tracking-tighter mb-4">Read the Question</h2>
-                   <p className="text-[18px] font-black text-[#94A3B8] uppercase tracking-[0.4em] max-w-sm">Data Injection sequence initialized. Synchronize with the primary broadcast terminal for intelligence gathering.</p>
+                   <h2 className="text-xl font-black text-[#0F172A] uppercase tracking-tighter mb-2">Read Question</h2>
+                   <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.2em] max-w-xs">Synchronize with broadcast terminal for intelligence.</p>
                 </div>
               ) : quiz?.status === 'showing-results' ? (
                   <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="col-span-full bg-white rounded-[40px] border border-[#E2E8F0] shadow-2xl flex flex-col overflow-hidden relative"
+                    className="col-span-full bg-white rounded-[32px] border border-[#E2E8F0] shadow-xl flex flex-col overflow-hidden relative"
                   >
-                     <div className={`p-10 flex flex-col items-center justify-center text-center ${
+                     <div className={`p-8 flex flex-col items-center justify-center text-center ${
                        currentQuestion?.correct_answer === String.fromCharCode(65 + selectedOption) ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
                      }`}>
-                        <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 ${
-                          currentQuestion?.correct_answer === String.fromCharCode(65 + selectedOption) ? 'bg-emerald-500 text-white shadow-[0_0_30px_rgba(16,185,129,0.4)]' : 'bg-rose-500 text-white shadow-[0_0_30px_rgba(244,63,94,0.4)]'
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+                          currentQuestion?.correct_answer === String.fromCharCode(65 + selectedOption) ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
                         }`}>
-                           {currentQuestion?.correct_answer === String.fromCharCode(65 + selectedOption) ? <CircleCheck size={48} strokeWidth={2.5} /> : <XCircle size={48} strokeWidth={2.5} />}
+                           {currentQuestion?.correct_answer === String.fromCharCode(65 + selectedOption) ? <CircleCheck size={32} strokeWidth={2.5} /> : <XCircle size={32} strokeWidth={2.5} />}
                         </div>
-                        <h2 className="text-4xl font-black uppercase tracking-tighter mb-2">
-                           {currentQuestion?.correct_answer === String.fromCharCode(65 + selectedOption) ? 'ACCURACY CONFIRMED' : 'INTELLIGENCE GAP'}
+                        <h2 className="text-2xl font-black uppercase tracking-tighter mb-1">
+                           {currentQuestion?.correct_answer === String.fromCharCode(65 + selectedOption) ? 'CONFIRMED' : 'GAP DETECTED'}
                         </h2>
-                        <p className="text-[13px] font-black uppercase tracking-[0.3em] opacity-60">Question synchronization complete</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">Sync Complete</p>
                      </div>
 
                      <div className="grid grid-cols-2 border-t border-[#E2E8F0]">
-                        <div className="p-8 border-r border-[#E2E8F0] flex flex-col items-center justify-center bg-slate-50/50">
-                           <div className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.4em] mb-4">Neural Rank</div>
-                           <div className="flex items-end gap-1">
-                              <span className="text-5xl font-black text-[#0F172A] leading-none">#{leaderboard.findIndex(p => p.user_id === user?.id) + 1 || '--'}</span>
-                           </div>
+                        <div className="p-6 border-r border-[#E2E8F0] flex flex-col items-center justify-center bg-slate-50/50">
+                           <div className="text-[8px] font-black text-[#94A3B8] uppercase tracking-[0.3em] mb-2">Rank</div>
+                           <span className="text-3xl font-black text-[#0F172A]">#{leaderboard.findIndex(p => p.user_id === user?.id) + 1 || '--'}</span>
                         </div>
-                        <div className="p-8 flex flex-col items-center justify-center bg-white">
-                           <div className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.4em] mb-4">Current Score</div>
+                        <div className="p-6 flex flex-col items-center justify-center bg-white">
+                           <div className="text-[8px] font-black text-[#94A3B8] uppercase tracking-[0.3em] mb-2">Score</div>
                            <div className="flex items-end gap-1">
-                              <span className="text-5xl font-black text-primary-blue leading-none">{score}</span>
-                              <span className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">PTS</span>
+                              <span className="text-3xl font-black text-primary-blue">{score}</span>
+                              <span className="text-[8px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">PTS</span>
                            </div>
                         </div>
                      </div>
 
-                     <div className="p-8 bg-[#0F172A] text-white flex flex-col items-center justify-center text-center">
-                        <div className="text-[9px] font-black text-white/40 uppercase tracking-[0.5em] mb-3">Target Reference</div>
-                        <div className="px-6 py-3 rounded-full bg-white/10 border border-white/20 text-sm font-black uppercase tracking-widest">
+                     <div className="p-6 bg-[#0F172A] text-white flex flex-col items-center justify-center text-center">
+                        <div className="text-[8px] font-black text-white/40 uppercase tracking-[0.4em] mb-2">Reference</div>
+                        <div className="px-4 py-2 rounded-full bg-white/10 border border-white/20 text-xs font-black uppercase tracking-widest">
                            {currentQuestion?.options?.[currentQuestion?.correct_answer.charCodeAt(0) - 65] || "DATA_MISSING"}
                         </div>
                      </div>
                   </motion.div>
               ) : (
-                <div className="col-span-full bg-white rounded-[40px] border border-[#E2E8F0] border-dashed flex flex-col items-center justify-center p-12 text-center">
-                   <MonitorOff className="text-[#94A3B8] w-16 h-16 mb-6 animate-pulse" />
-                   <h2 className="text-2xl font-black text-[#0F172A] uppercase tracking-tighter">Waiting Terminal</h2>
-                   <p className="text-[15px] font-black text-[#94A3B8] uppercase tracking-[0.3em] mt-2">Analysis broadcast on main display terminal</p>
+                <div className="col-span-full bg-white rounded-[32px] border border-[#E2E8F0] border-dashed flex flex-col items-center justify-center p-8 text-center">
+                   <MonitorOff className="text-[#94A3B8] w-12 h-12 mb-4" />
+                   <h2 className="text-lg font-black text-[#0F172A] uppercase tracking-tighter">Waiting Terminal</h2>
+                   <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.2em] mt-1">Broadcast pending on main display</p>
                 </div>
               )}
            </AnimatePresence>
         </div>
 
-       {/* Bottom Identity Node */}
-       <div className="p-4 flex items-center justify-center gap-3">
-          <div className="w-6 h-px bg-[#E2E8F0]" />
-          <span className="text-[13.5px] font-black text-[#94A3B8] uppercase tracking-[0.5em]">{user?.email || "CONNECTED_NODE"}</span>
-          <div className="w-6 h-px bg-[#E2E8F0]" />
+       <div className="p-3 flex items-center justify-center gap-3">
+          <span className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.4em]">{user?.email || "CONNECTED_NODE"}</span>
        </div>
     </div>
   );

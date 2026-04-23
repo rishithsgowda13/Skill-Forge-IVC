@@ -99,71 +99,70 @@ export default function SentinelProtocol({ onViolation, onTermination, active = 
             className="fixed inset-0 z-[1000] flex items-center justify-center bg-[#0F172A]/90 backdrop-blur-xl p-6"
           >
             <motion.div
-              initial={{ scale: 0.9, y: 20 }}
+              initial={{ scale: 0.95, y: 10 }}
               animate={{ scale: 1, y: 0 }}
-              className="w-full max-w-md bg-white rounded-[40px] p-10 text-center space-y-8 shadow-[0_50px_100px_-20px_rgba(37,99,235,0.3)] border-4 border-amber-400"
+              className="w-full max-w-sm bg-white rounded-[32px] p-8 text-center space-y-6 shadow-xl border-2 border-amber-400"
             >
-              <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto relative">
-                <AlertTriangle className="text-amber-500 w-10 h-10 animate-bounce" />
-                <div className="absolute inset-0 bg-amber-400/20 rounded-full animate-ping" />
+              <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto relative">
+                <AlertTriangle className="text-amber-500 w-8 h-8" />
               </div>
               
-              <div className="space-y-4">
-                <h2 className="text-3xl font-black text-[#0F172A] tracking-tighter uppercase leading-none">Security Alert</h2>
-                <p className="text-[10px] font-black text-amber-600 uppercase tracking-[0.4em] leading-loose">Integrity Compromised: {lastViolationType}</p>
-                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 mt-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Protocol Violations</span>
-                    <span className="text-sm font-black text-rose-500 uppercase">{violations} / {MAX_VIOLATIONS}</span>
+              <div className="space-y-3">
+                <h2 className="text-xl font-black text-[#0F172A] tracking-tighter uppercase leading-none">Security Alert</h2>
+                <p className="text-[8px] font-black text-amber-600 uppercase tracking-[0.3em] leading-loose">Integrity Compromised: {lastViolationType}</p>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 mt-4">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Violations</span>
+                    <span className="text-xs font-black text-rose-500 uppercase">{violations} / {MAX_VIOLATIONS}</span>
                   </div>
-                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
                       animate={{ width: `${(violations / MAX_VIOLATIONS) * 100}%` }}
-                      className="h-full bg-rose-500 shadow-glow-blue" 
+                      className="h-full bg-rose-500" 
                     />
                   </div>
                 </div>
               </div>
-
-              <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.2em] leading-relaxed">
-                The Sentinel proctoring node has detected an unauthorized protocol interaction. Repeated violations will result in immediate session termination.
+ 
+              <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-[0.15em] leading-relaxed">
+                Sentinel detected an unauthorized interaction. Repeated breaches will terminate the session.
               </p>
-
+ 
               <button
                 onClick={() => setShowWarning(false)}
-                className="w-full py-5 bg-[#0F172A] text-white rounded-2xl font-black text-xs uppercase tracking-[0.4em] hover:scale-[1.02] active:scale-95 transition-all shadow-2xl"
+                className="w-full py-4 bg-[#0F172A] text-white rounded-xl font-black text-[10px] uppercase tracking-[0.3em] active:scale-95 transition-all shadow-lg"
               >
-                Acknowledge Protocol
+                Acknowledge
               </button>
             </motion.div>
           </motion.div>
         )}
-
+ 
         {violations >= MAX_VIOLATIONS && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="fixed inset-0 z-[1001] flex items-center justify-center bg-rose-600 p-6"
           >
-            <div className="text-center space-y-10 text-white max-w-lg">
-              <div className="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-10 border-4 border-white/40">
-                <XCircle size={64} className="text-white" />
+            <div className="text-center space-y-6 text-white max-w-md">
+              <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-white/40">
+                <XCircle size={48} className="text-white" />
               </div>
-              <div className="space-y-4">
-                <h1 className="text-6xl font-black tracking-tighter uppercase leading-none">Access Revoked</h1>
-                <p className="text-[12px] font-black opacity-60 uppercase tracking-[0.6em]">Session Terminated Due to Integrity Breach</p>
+              <div className="space-y-3">
+                <h1 className="text-4xl font-black tracking-tighter uppercase leading-none">Access Revoked</h1>
+                <p className="text-[10px] font-black opacity-60 uppercase tracking-[0.4em]">Integrity Breach Detected</p>
               </div>
-              <p className="text-lg font-black opacity-80 leading-relaxed uppercase tracking-tight">
-                Your authorization has been permanently revoked for this session. A detailed report of the detected violations ({violations}/{MAX_VIOLATIONS}) has been synchronized with the administration node.
+              <p className="text-base font-black opacity-80 leading-relaxed uppercase tracking-tight">
+                Authorization revoked ({violations}/{MAX_VIOLATIONS}). Report synchronized with administration node.
               </p>
-              <div className="p-8 bg-white/10 rounded-[32px] border border-white/20">
-                <p className="text-[10px] font-black uppercase tracking-[0.4em] mb-2">Final Violation Flag</p>
-                <p className="text-xl font-black uppercase tracking-widest">{lastViolationType}</p>
+              <div className="p-6 bg-white/10 rounded-[24px] border border-white/20">
+                <p className="text-[8px] font-black uppercase tracking-[0.3em] mb-1.5 opacity-60">Final Violation Flag</p>
+                <p className="text-lg font-black uppercase tracking-widest">{lastViolationType}</p>
               </div>
               <button
                 onClick={() => window.location.href = "/"}
-                className="px-12 py-6 bg-white text-rose-600 rounded-2xl font-black text-xs uppercase tracking-[0.4em] hover:bg-rose-50 transition-all shadow-2xl"
+                className="px-10 py-5 bg-white text-rose-600 rounded-xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-rose-50 transition-all shadow-xl"
               >
                 Exit Terminal
               </button>
@@ -171,17 +170,17 @@ export default function SentinelProtocol({ onViolation, onTermination, active = 
           </motion.div>
         )}
       </AnimatePresence>
-
+ 
       {/* Floating Sentinel Indicator */}
-      <div className="fixed top-6 right-6 z-[500] flex items-center gap-4">
-        <div className="bg-white/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/20 shadow-xl flex items-center gap-4">
+      <div className="fixed top-4 right-4 z-[500] flex items-center gap-3">
+        <div className="bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-xl border border-white/20 shadow-lg flex items-center gap-3">
           <div className="relative">
-             <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-[0_0_10px_#10B981]" />
+             <div className="w-2 h-2 bg-emerald-500 rounded-full" />
              <div className="absolute inset-0 bg-emerald-500/40 rounded-full animate-ping" />
           </div>
           <div className="flex flex-col">
-             <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Sentinel Active</span>
-             <span className="text-[8px] font-black text-[#94A3B8] uppercase tracking-[0.2em] leading-none">Full Proctoring Mode Alpha</span>
+             <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-0.5">Sentinel Active</span>
+             <span className="text-[7px] font-black text-[#94A3B8] uppercase tracking-[0.1em] leading-none">Proctoring Mode Alpha</span>
           </div>
         </div>
       </div>

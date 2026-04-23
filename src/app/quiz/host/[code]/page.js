@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,8 +21,15 @@ import {
   ShieldAlert,
   AlertTriangle,
   MonitorOff,
-  XCircle
+  XCircle,
+  FileDown,
+  X,
+  Eye,
+  Hash,
+  Crown
 } from "lucide-react";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 export default function AdminHostPage() {
   const { code } = useParams();
@@ -46,6 +53,57 @@ export default function AdminHostPage() {
   const channelRef = useRef(null);
   const [activeRegistryTab, setActiveRegistryTab] = useState('leaderboard');
   const [violations, setViolations] = useState([]);
+  const [showResultsModal, setShowResultsModal] = useState(false);
+
+  const fetchLeaderboard = useCallback(async (quizId, currentPresentUsers = null) => {
+    const { data, error } = await supabase
+      .from("submissions")
+      .select("user_id, points, profiles!user_id(full_name)")
+      .eq("quiz_id", quizId);
+
+    const usersToMerge = currentPresentUsers || presentUsers;
+    const presentIds = usersToMerge.map(u => u.id).filter(id => id && !id.startsWith('guest-') && !id.startsWith('mock_'));
+    
+    let profilesData = [];
+    if (presentIds.length > 0) {
+      const { data: pData } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', presentIds);
+      profilesData = pData || [];
+    }
+
+    const leaderboardMap = new Map();
+    data?.forEach(sub => {
+      const uid = sub.user_id;
+      const current = leaderboardMap.get(uid) || { points: 0 };
+      leaderboardMap.set(uid, {
+        points: current.points + (sub.points || 0),
+        full_name: sub.profiles?.full_name
+      });
+    });
+
+    usersToMerge.forEach(u => {
+      if (!leaderboardMap.has(u.id)) {
+        leaderboardMap.set(u.id, { points: 0, full_name: u.full_name });
+      }
+    });
+
+    const finalData = Array.from(leaderboardMap.entries()).map(([uid, stats]) => {
+      const directProfile = profilesData.find(p => p.id === uid);
+      const fullName = directProfile?.full_name || stats.full_name || `Node-${uid.toString().substring(0, 5)}`;
+      
+      return {
+        id: uid,
+        user_id: uid,
+        full_name: fullName,
+        total_score: stats.points,
+        points: stats.points
+      };
+    }).sort((a, b) => b.total_score - a.total_score);
+
+    setLeaderboard(finalData);
+  }, [presentUsers, supabase]);
 
   useEffect(() => {
     if (status === 'showing-question') {
@@ -122,7 +180,15 @@ export default function AdminHostPage() {
           
           const users = Object.entries(usersMap).map(([id, full_name]) => ({ id, full_name }));
           setPresentUsers(users);
-          if (quizData?.id) fetchLeaderboard(quizData.id, users);
+          
+          // Debounce/Throttle leaderboard fetch on presence sync to avoid hammering Supabase
+          if (quizData?.id) {
+             const now = Date.now();
+             if (now - (window._lastLeaderboardFetch || 0) > 2000) {
+                window._lastLeaderboardFetch = now;
+                fetchLeaderboard(quizData.id, users);
+             }
+          }
         })
         .on('broadcast', { event: 'violation_detected' }, (payload) => {
           setViolations(prev => {
@@ -178,60 +244,7 @@ export default function AdminHostPage() {
     return () => {
       active = false;
     };
-  }, [code]);
-
-  async function fetchLeaderboard(quizId, currentPresentUsers = null) {
-    const { data, error } = await supabase
-      .from("submissions")
-      .select("user_id, points, profiles!user_id(full_name)")
-      .eq("quiz_id", quizId);
-
-    const usersToMerge = currentPresentUsers || presentUsers;
-    const presentIds = usersToMerge.map(u => u.id).filter(id => id && !id.startsWith('guest-') && !id.startsWith('mock_'));
-    
-    let profilesData = [];
-    if (presentIds.length > 0) {
-      const { data: pData } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', presentIds);
-      profilesData = pData || [];
-    }
-
-    if (error) {
-      console.warn("LEADERBOARD SYNC WARNING:", error.message);
-      setLeaderboard(usersToMerge);
-      return;
-    }
-
-    const scoreMap = (data || []).reduce((acc, curr) => {
-      const uid = curr.user_id;
-      if (!uid) return acc;
-      acc[uid] = (acc[uid] || 0) + (curr.points || 0);
-      return acc;
-    }, {});
-
-    const allUserIds = new Set([
-      ...Object.keys(scoreMap),
-      ...usersToMerge.map(u => u.id)
-    ].filter(id => id));
-
-    const merged = Array.from(allUserIds).map(uid => {
-      const pres = usersToMerge.find(u => u.id === uid);
-      const subProfile = data?.find(s => s.user_id === uid)?.profiles;
-      const directProfile = profilesData.find(p => p.id === uid);
-      const fullName = directProfile?.full_name || subProfile?.full_name || pres?.full_name || `Node-${uid.toString().substring(0, 5)}`;
-      
-      return {
-        id: uid,
-        full_name: fullName,
-        total_score: scoreMap[uid] || 0,
-        points: scoreMap[uid] || 0
-      };
-    }).sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
-
-    setLeaderboard(merged);
-  }
+  }, [code, fetchLeaderboard, supabase]);
 
   useEffect(() => {
     if (quiz && quiz.questions && quiz.current_question_index !== undefined) {
@@ -240,19 +253,22 @@ export default function AdminHostPage() {
     }
   }, [quiz]);
 
-  const updateQuizStatus = async (newStatus, index = null) => {
+  const updateQuizStatus = async (newStatus, questionIndex = null) => {
+    if (!quiz?.id) return;
+    
     const payload = { status: newStatus };
-    if (index !== null) payload.current_question_index = index;
+    if (questionIndex !== null) payload.current_question_index = questionIndex;
     
     await supabase.from("quizzes").update(payload).eq("id", quiz.id);
     
-    const channel = supabase.channel(`quiz_session_${code.toUpperCase()}`);
+    const canal_id = `quiz_session_${code.toUpperCase()}`;
+    const channel = supabase.channel(canal_id);
     await channel.send({
       type: 'broadcast',
       event: 'state_update',
       payload: { ...quiz, ...payload }
     });
-
+    
     setQuiz(prev => {
        const updated = { ...prev, ...payload };
        quizRef.current = updated;
@@ -286,7 +302,7 @@ export default function AdminHostPage() {
     await updateQuizStatus('lobby', 0);
   };
 
-  const recalibrateNode = async () => {
+  const recalibrateNode = useCallback(async () => {
     if (!quiz?.id) return;
     setRefreshing(true);
     
@@ -319,7 +335,7 @@ export default function AdminHostPage() {
     }
     
     setTimeout(() => setRefreshing(false), 1000);
-  };
+  }, [code, quiz?.id, supabase, fetchLeaderboard]);
 
   const startQuiz = async () => {
     if (!quiz?.id) return;
@@ -372,6 +388,80 @@ export default function AdminHostPage() {
     }, 1000);
   };
 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text(quiz?.title?.toUpperCase() || 'QUIZ RESULTS', pageWidth / 2, 22, { align: 'center' });
+    
+    // Subtitle
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Access Code: ${code?.toUpperCase()} | Generated: ${new Date().toLocaleString()}`, pageWidth / 2, 30, { align: 'center' });
+    doc.text(`Total Participants: ${leaderboard.length}`, pageWidth / 2, 36, { align: 'center' });
+    
+    // Separator line
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, 40, pageWidth - 14, 40);
+    
+    // Table
+    doc.setTextColor(0, 0, 0);
+    const tableData = leaderboard.map((player, index) => [
+      index + 1,
+      player.full_name || `Node-${player.id?.toString().substring(0, 8)}`,
+      player.total_score || 0,
+      index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '-'
+    ]);
+    
+    doc.autoTable({
+      startY: 44,
+      head: [['RANK', 'PARTICIPANT NAME', 'SCORE', 'MEDAL']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [15, 23, 42],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9,
+        halign: 'center',
+        cellPadding: 4,
+      },
+      bodyStyles: {
+        fontSize: 9,
+        cellPadding: 3.5,
+        halign: 'center',
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 20, halign: 'center' },
+        1: { halign: 'left', cellWidth: 'auto' },
+        2: { cellWidth: 30, halign: 'center', fontStyle: 'bold' },
+        3: { cellWidth: 25, halign: 'center' },
+      },
+      margin: { left: 14, right: 14 },
+      didDrawPage: (data) => {
+        // Footer
+        const pageCount = doc.internal.getNumberOfPages();
+        doc.setFontSize(7);
+        doc.setTextColor(160, 160, 160);
+        doc.text(
+          `SKILL FORGE • Page ${data.pageNumber} of ${pageCount}`,
+          pageWidth / 2,
+          doc.internal.pageSize.getHeight() - 10,
+          { align: 'center' }
+        );
+      },
+    });
+    
+    doc.save(`${quiz?.title?.replace(/\s+/g, '_') || 'quiz'}_results_${code?.toUpperCase()}.pdf`);
+  };
+
   if (loading) return null;
 
   return (
@@ -386,12 +476,12 @@ export default function AdminHostPage() {
              <div className="flex items-center gap-4">
                 <button 
                   onClick={() => router.push('/quiz/admin')}
-                  className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all group mr-2"
+                  className="p-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all group mr-2"
                 >
-                  <ArrowLeft className="w-5 h-5 text-white/60 group-hover:text-white transition-colors" />
+                  <ArrowLeft className="w-4 h-4 text-white/60 group-hover:text-white transition-colors" />
                 </button>
-                <div className="p-4 bg-white/5 rounded-[22px] border border-white/10 backdrop-blur-xl shadow-2xl">
-                   <Zap className="text-primary-blue w-7 h-7 fill-primary-blue/20" />
+                <div className="p-3 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl">
+                   <Zap className="text-primary-blue w-5 h-5 fill-primary-blue/20" />
                 </div>
                 <div>
                    <div className="flex items-center gap-2 mb-1">
@@ -402,14 +492,14 @@ export default function AdminHostPage() {
                 </div>
              </div>
 
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 p-1 rounded-[20px] flex items-center gap-1 shadow-xl">
-                 <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-[15px] border border-white/5">
-                    <Users className="text-primary-blue w-3.5 h-3.5" />
-                    <span className="text-xs font-black text-white">{joinCount} <span className="text-white/40 text-[9px] tracking-widest ml-1">NODES</span></span>
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 p-1 rounded-2xl flex items-center gap-1 shadow-xl">
+                 <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-xl border border-white/5">
+                    <Users className="text-primary-blue w-3 h-3" />
+                    <span className="text-xs font-black text-white">{joinCount} <span className="text-white/40 text-[8px] tracking-widest ml-1">NODES</span></span>
                  </div>
-                 <div className="px-5 py-2 bg-white text-[#0F172A] rounded-[15px] shadow-lg">
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] opacity-30 block mb-0.5">Access Key</span>
-                    <span className="text-lg font-black tracking-[0.2em] leading-none uppercase">{code}</span>
+                 <div className="px-2.5 py-1 bg-white text-[#0F172A] rounded-xl shadow-lg">
+                    <span className="text-[5px] font-black uppercase tracking-[0.4em] opacity-30 block mb-0.5">Access Key</span>
+                    <span className="text-sm font-black tracking-[0.2em] leading-none uppercase">{code}</span>
                  </div>
               </div>
           </header>
@@ -439,10 +529,10 @@ export default function AdminHostPage() {
 
                      <button 
                        onClick={startQuiz}
-                       className="bg-primary-blue hover:bg-blue-600 px-10 py-5 rounded-[22px] text-xs font-black uppercase tracking-[0.4em] transition-all flex items-center gap-3 group shadow-xl hover:scale-[1.02] active:scale-95 text-white"
+                       className="bg-primary-blue hover:bg-blue-600 px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.4em] transition-all flex items-center gap-3 group shadow-xl hover:scale-[1.02] active:scale-95 text-white"
                      >
                         <span>Initialize Protocol</span>
-                        <PlayCircle size={18} className="opacity-40 group-hover:opacity-100 transition-opacity" />
+                        <PlayCircle size={16} className="opacity-40 group-hover:opacity-100 transition-opacity" />
                      </button>
                   </motion.div>
                 )}
@@ -532,20 +622,20 @@ export default function AdminHostPage() {
                      className="space-y-12 text-center py-20"
                    >
                       <div className="space-y-6">
-                         <div className="w-28 h-28 bg-emerald-500/10 rounded-[44px] border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                            <CircleCheck className="text-emerald-500 w-14 h-14" />
+                         <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+                            <CircleCheck className="text-emerald-500 w-10 h-10" />
                          </div>
-                         <h2 className="text-7xl font-black leading-tight tracking-tight uppercase text-emerald-400 max-w-4xl mx-auto">
+                         <h2 className="text-6xl font-black leading-tight tracking-tight uppercase text-emerald-400 max-w-4xl mx-auto">
                             {currentQuestion.options?.[['A','B','C','D'].indexOf(currentQuestion.correct_answer)] || currentQuestion.correct_answer}
                          </h2>
                       </div>
 
                       <button 
                         onClick={nextQuestion}
-                        className="bg-white text-[#020617] px-20 py-8 rounded-[36px] text-lg font-black uppercase tracking-[0.4em] transition-all flex items-center gap-6 mx-auto hover:bg-primary-blue hover:text-white group shadow-2xl"
+                        className="bg-white text-[#020617] px-12 py-5 rounded-3xl text-sm font-black uppercase tracking-[0.4em] transition-all flex items-center gap-4 mx-auto hover:bg-primary-blue hover:text-white group shadow-2xl"
                       >
                          <span>Next Protocol</span>
-                         <ArrowRight size={32} className="group-hover:translate-x-2 transition-transform" />
+                         <ArrowRight size={24} className="group-hover:translate-x-2 transition-transform" />
                       </button>
                    </motion.div>
                 )}
@@ -555,23 +645,39 @@ export default function AdminHostPage() {
                      key="finished"
                      initial={{ opacity: 0, scale: 0.9 }}
                      animate={{ opacity: 1, scale: 1 }}
-                     className="space-y-16 text-center"
+                     className="space-y-12 text-center"
                    >
                       <div className="space-y-8">
-                         <Trophy size={180} className="text-amber-400 mx-auto" />
-                         <h1 className="text-8xl font-black tracking-[0.1em] uppercase leading-none">ELITE NODE ESTABLISHED</h1>
+                         <Trophy size={120} className="text-amber-400 mx-auto" />
+                         <h1 className="text-6xl font-black tracking-[0.1em] uppercase leading-none">ELITE NODE ESTABLISHED</h1>
                       </div>
 
-                      <div className="flex gap-6 justify-center">
+                      <div className="flex flex-wrap gap-4 justify-center">
+                         <button 
+                           onClick={() => setShowResultsModal(true)}
+                           className="bg-white text-[#020617] px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-95 shadow-xl"
+                         >
+                           <Eye size={14} />
+                           View Full Results
+                         </button>
+                         <button 
+                           onClick={exportToPDF}
+                           className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-95 shadow-xl"
+                         >
+                           <FileDown size={14} />
+                           Export PDF
+                         </button>
+                      </div>
+                      <div className="flex gap-4 justify-center">
                          <button 
                            onClick={() => setStatus('lobby')}
-                           className="bg-white/5 border border-white/10 px-10 py-6 rounded-[28px] font-black text-[13px] uppercase tracking-[0.3em] transition-all backdrop-blur-md"
+                           className="bg-white/5 border border-white/10 px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] transition-all backdrop-blur-md"
                          >
                            Reset Node
                          </button>
                          <button 
                            onClick={() => router.push('/quiz/admin/quizzes')}
-                           className="bg-primary-blue px-16 py-6 rounded-[28px] font-black text-[13px] uppercase tracking-[0.3em] transition-all"
+                           className="bg-primary-blue px-10 py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] transition-all"
                          >
                            Finalize Matrix
                          </button>
@@ -583,21 +689,21 @@ export default function AdminHostPage() {
        </div>
 
         {/* Global Registry Sidebar */}
-        <div className="w-full lg:w-[350px] bg-[#020617] lg:bg-white text-white lg:text-[#0F172A] flex flex-col p-6 overflow-hidden relative border-l border-white/5 lg:border-gray-100">
-          <div className="relative z-10 mb-6 md:mb-8">
-             <div className="flex items-center gap-4 mb-8">
-                <div className="p-2 bg-primary-blue/10 lg:bg-blue-50 rounded-[14px]">
-                   <Medal className="text-primary-blue w-4 h-4" />
+        <div className="w-full lg:w-[320px] bg-[#020617] lg:bg-white text-white lg:text-[#0F172A] flex flex-col p-5 overflow-hidden relative border-l border-white/5 lg:border-gray-100">
+          <div className="relative z-10 mb-5">
+             <div className="flex items-center gap-3 mb-6">
+                <div className="p-1.5 bg-primary-blue/10 lg:bg-blue-50 rounded-[12px]">
+                   <Medal className="text-primary-blue w-3.5 h-3.5" />
                 </div>
-                <h3 className="text-lg font-black uppercase tracking-tighter">Elite Registry</h3>
+                <h3 className="text-base font-black uppercase tracking-tighter">Elite Registry</h3>
              </div>
              
-             <div className="flex p-1.5 bg-white/5 lg:bg-slate-100 rounded-[24px] mb-8 gap-1.5">
+             <div className="flex p-1 bg-white/5 lg:bg-slate-100 rounded-[20px] mb-6 gap-1">
                 <button 
                    onClick={() => setActiveRegistryTab('leaderboard')}
-                   className={`flex-1 py-3 px-4 rounded-[18px] text-[9px] font-black uppercase tracking-widest transition-all ${
+                   className={`flex-1 py-2.5 px-3 rounded-[15px] text-[8px] font-black uppercase tracking-widest transition-all ${
                      activeRegistryTab === 'leaderboard' 
-                     ? 'bg-[#0F172A] lg:bg-white text-white lg:text-[#0F172A] shadow-lg' 
+                     ? 'bg-[#0F172A] lg:bg-white text-white lg:text-[#0F172A] shadow-md' 
                      : 'text-white/40 lg:text-slate-400 hover:text-white lg:hover:text-[#0F172A]'
                    }`}
                 >
@@ -605,26 +711,26 @@ export default function AdminHostPage() {
                 </button>
                 <button 
                    onClick={() => setActiveRegistryTab('violations')}
-                   className={`flex-1 py-3 px-4 rounded-[18px] text-[9px] font-black uppercase tracking-widest transition-all relative ${
+                   className={`flex-1 py-2.5 px-3 rounded-[15px] text-[8px] font-black uppercase tracking-widest transition-all relative ${
                      activeRegistryTab === 'violations' 
-                     ? 'bg-[#0F172A] lg:bg-white text-white lg:text-[#0F172A] shadow-lg' 
+                     ? 'bg-[#0F172A] lg:bg-white text-white lg:text-[#0F172A] shadow-md' 
                      : 'text-white/40 lg:text-slate-400 hover:text-white lg:hover:text-[#0F172A]'
                    }`}
                 >
                    Threat Intel
                    {violations.length > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[8px] flex items-center justify-center rounded-full animate-pulse border-2 border-white lg:border-slate-100">
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[7px] flex items-center justify-center rounded-full animate-pulse border-2 border-white lg:border-slate-100">
                          {violations.length}
                       </span>
                    )}
                 </button>
              </div>
-
+ 
              <div className="flex justify-between items-end mb-2">
-                <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-[0.3em] leading-none">
-                  {activeRegistryTab === 'leaderboard' ? 'Global Ranking Matrix' : 'Integrity Breach Logs'}
+                <p className="text-[8px] font-black text-[#94A3B8] uppercase tracking-[0.3em] leading-none">
+                   {activeRegistryTab === 'leaderboard' ? 'Global Ranking Matrix' : 'Integrity Breach Logs'}
                 </p>
-                <span className="text-[8px] font-black uppercase text-primary-blue opacity-50">
+                <span className="text-[7px] font-black uppercase text-primary-blue opacity-50">
                    {activeRegistryTab === 'leaderboard' ? leaderboard.length : violations.length} RECORDS
                 </span>
              </div>
@@ -636,51 +742,51 @@ export default function AdminHostPage() {
                 />
              </div>
           </div>
-
-          <div className="flex-1 space-y-2.5 overflow-y-auto pr-1 custom-scrollbar-hide relative z-10 py-1">
+ 
+          <div className="flex-1 space-y-2 overflow-y-auto pr-1 custom-scrollbar relative z-10 py-1">
              <AnimatePresence mode="wait">
                 {activeRegistryTab === 'leaderboard' ? (
                    <motion.div 
                      key="leaderboard-tab"
-                     initial={{ opacity: 0, x: 20 }}
+                     initial={{ opacity: 0, x: 15 }}
                      animate={{ opacity: 1, x: 0 }}
-                     exit={{ opacity: 0, x: -20 }}
-                     className="space-y-2.5"
+                     exit={{ opacity: 0, x: -15 }}
+                     className="space-y-2"
                    >
                       {leaderboard.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-10 py-20">
-                           <Users size={48} strokeWidth={1} />
-                           <p className="text-[8px] font-black uppercase tracking-[0.4em] text-center">Awaiting Node Connections</p>
+                        <div className="h-full flex flex-col items-center justify-center space-y-3 opacity-10 py-16">
+                           <Users size={32} strokeWidth={1} />
+                           <p className="text-[7px] font-black uppercase tracking-[0.3em] text-center">Awaiting Node Connections</p>
                         </div>
                       ) : leaderboard.map((player, index) => (
                          <motion.div
                            key={player.id}
                            layout
-                           initial={{ opacity: 0, x: 30 }}
+                           initial={{ opacity: 0, x: 20 }}
                            animate={{ opacity: 1, x: 0 }}
-                           className={`flex items-center justify-between p-4 rounded-[20px] border ${
-                             index === 0 ? 'bg-[#0F172A] text-white border-[#0F172A] shadow-2xl scale-[1.01] ring-4 ring-primary-blue/10' : 
+                           className={`flex items-center justify-between p-3.5 rounded-[16px] border ${
+                             index === 0 ? 'bg-[#0F172A] text-white border-[#0F172A] shadow-xl scale-[1.01] ring-2 ring-primary-blue/5' : 
                              'bg-white/5 lg:bg-white border-white/5 lg:border-[#F1F5F9]'
                            } transition-all relative overflow-hidden`}
                          >
-                            <div className="flex items-center gap-5 relative z-10">
-                               <div className={`w-8 h-8 rounded-[12px] flex items-center justify-center font-black text-sm ${
+                            <div className="flex items-center gap-4 relative z-10">
+                               <div className={`w-7 h-7 rounded-[10px] flex items-center justify-center font-black text-xs ${
                                  index === 0 ? 'bg-amber-400 text-[#0F172A]' : 'bg-gray-500/5 text-gray-400'
                                }`}>
                                  {index + 1}
                                </div>
                                <div className="flex flex-col">
-                                  <span className="text-sm font-black uppercase tracking-tight truncate max-w-[160px]">
+                                  <span className="text-[11px] font-black uppercase tracking-tight truncate max-w-[120px]">
                                     {player.full_name}
                                   </span>
-                                  <span className="text-[9px] font-black uppercase tracking-widest opacity-40">Verified</span>
+                                  <span className="text-[7px] font-black uppercase tracking-widest opacity-40">Verified</span>
                                </div>
                             </div>
                             <div className="text-right relative z-10">
-                               <span className={`text-lg font-black tabular-nums ${index === 0 ? 'text-amber-400' : 'text-[#0F172A]'}`}>
+                               <span className={`text-base font-black tabular-nums ${index === 0 ? 'text-amber-400' : 'text-[#0F172A]'}`}>
                                  {player.total_score || 0}
                                </span>
-                               <p className="text-[9px] font-black uppercase opacity-30 mt-1">PTS</p>
+                               <p className="text-[8px] font-black uppercase opacity-30 mt-0.5">PTS</p>
                             </div>
                          </motion.div>
                       ))}
@@ -688,39 +794,39 @@ export default function AdminHostPage() {
                 ) : (
                    <motion.div 
                      key="violations-tab"
-                     initial={{ opacity: 0, x: 20 }}
+                     initial={{ opacity: 0, x: 15 }}
                      animate={{ opacity: 1, x: 0 }}
-                     exit={{ opacity: 0, x: -20 }}
-                     className="space-y-3.5"
+                     exit={{ opacity: 0, x: -15 }}
+                     className="space-y-2"
                    >
                       {violations.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-10 py-20">
-                           <ShieldAlert size={48} strokeWidth={1} />
-                           <p className="text-[8px] font-black uppercase tracking-[0.4em] text-center">No Protocol Breaches Detected</p>
+                        <div className="h-full flex flex-col items-center justify-center space-y-3 opacity-10 py-16">
+                           <ShieldAlert size={32} strokeWidth={1} />
+                           <p className="text-[7px] font-black uppercase tracking-[0.3em] text-center">No Protocol Breaches Detected</p>
                         </div>
                       ) : violations.map((v, index) => (
                          <motion.div
                            key={v.userId}
-                           initial={{ opacity: 0, y: 10 }}
+                           initial={{ opacity: 0, y: 8 }}
                            animate={{ opacity: 1, y: 0 }}
-                           className={`flex items-center justify-between p-4 rounded-[20px] transition-all ${
+                           className={`flex items-center justify-between p-3.5 rounded-[16px] transition-all ${
                               v.status === 'terminated' ? 'bg-rose-500/10 border-rose-500/30' : 'bg-amber-500/5 border-amber-500/20'
                            } border`}
                          >
-                            <div className="flex items-center gap-4">
-                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${v.status === 'terminated' ? 'bg-rose-600 text-white' : 'bg-amber-100 text-amber-600'}`}>
-                                  {v.status === 'terminated' ? <MonitorOff size={18} /> : <AlertTriangle size={18} />}
+                            <div className="flex items-center gap-3">
+                               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${v.status === 'terminated' ? 'bg-rose-600 text-white' : 'bg-amber-100 text-amber-600'}`}>
+                                  {v.status === 'terminated' ? <MonitorOff size={14} /> : <AlertTriangle size={14} />}
                                </div>
                                <div className="flex flex-col">
-                                  <span className={`text-sm font-black uppercase tracking-tight ${v.status === 'terminated' ? 'text-rose-500' : 'text-[#0F172A]'}`}>{v.userName}</span>
-                                  <span className={`text-[8px] font-black uppercase tracking-widest mt-1 ${v.status === 'terminated' ? 'text-rose-500/60' : 'text-amber-600/60'}`}>
+                                  <span className={`text-[11px] font-black uppercase tracking-tight ${v.status === 'terminated' ? 'text-rose-500' : 'text-[#0F172A]'}`}>{v.userName}</span>
+                                  <span className={`text-[7px] font-black uppercase tracking-widest mt-0.5 ${v.status === 'terminated' ? 'text-rose-500/60' : 'text-amber-600/60'}`}>
                                      {v.status === 'terminated' ? 'NODE_TERMINATED' : `${v.count} BREACHES`}
                                   </span>
                                </div>
                             </div>
                             <div className="text-right">
-                               <div className="text-[8px] font-black text-[#94A3B8] uppercase tracking-widest">Breach</div>
-                               <div className="text-[9px] font-black text-[#0F172A] uppercase truncate max-w-[100px]">{v.type?.split(' ')[0]}...</div>
+                               <div className="text-[7px] font-black text-[#94A3B8] uppercase tracking-widest">Breach</div>
+                               <div className="text-[8px] font-black text-[#0F172A] uppercase truncate max-w-[80px]">{v.type?.split(' ')[0]}...</div>
                             </div>
                          </motion.div>
                       ))}
@@ -728,18 +834,182 @@ export default function AdminHostPage() {
                 )}
              </AnimatePresence>
           </div>
-
-          <div className="mt-8">
+ 
+          <div className="mt-auto pt-4 space-y-2">
+              <button 
+                onClick={() => setShowResultsModal(true)}
+                className="w-full py-2.5 bg-[#0F172A] lg:bg-primary-blue text-white rounded-xl text-[7px] font-black uppercase tracking-[0.3em] hover:opacity-90 transition-all flex items-center justify-center gap-2"
+              >
+                <Eye size={8} />
+                <span>View Full Results</span>
+              </button>
               <button 
                 onClick={recalibrateNode}
                 disabled={refreshing}
-                className="w-full py-3 bg-slate-50 border border-slate-100 rounded-[20px] text-[8px] font-black uppercase tracking-[0.4em] text-slate-400 hover:text-primary-blue hover:bg-blue-50 transition-all flex items-center justify-center gap-3"
+                className="w-full py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[7px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-primary-blue hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
               >
-                <Zap size={10} className={`${refreshing ? "animate-bounce" : ""}`} />
+                <Zap size={8} className={`${refreshing ? "animate-bounce" : ""}`} />
                 <span>{refreshing ? "Synchronizing Matrix..." : "Recalibrate Neural Node"}</span>
               </button>
           </div>
         </div>
+
+        {/* Full Results Modal */}
+        <AnimatePresence>
+          {showResultsModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8"
+              onClick={() => setShowResultsModal(false)}
+            >
+              {/* Backdrop */}
+              <div className="absolute inset-0 bg-[#020617]/90 backdrop-blur-xl" />
+              
+              {/* Modal */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.92, y: 30 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="relative w-full max-w-3xl max-h-[85vh] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div className="bg-[#0F172A] p-6 md:p-8 relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary-blue rounded-full blur-3xl" />
+                    <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-emerald-500 rounded-full blur-3xl" />
+                  </div>
+                  <div className="relative z-10 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2.5 bg-white/10 rounded-2xl border border-white/10">
+                        <Trophy className="w-6 h-6 text-amber-400" />
+                      </div>
+                      <div>
+                        <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/40 mb-1">Final Leaderboard</p>
+                        <h2 className="text-xl font-black text-white uppercase tracking-tight">{quiz?.title || 'Quiz Results'}</h2>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={exportToPDF}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.03] active:scale-95 shadow-lg"
+                      >
+                        <FileDown size={13} />
+                        Export PDF
+                      </button>
+                      <button
+                        onClick={() => setShowResultsModal(false)}
+                        className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-all"
+                      >
+                        <X size={16} className="text-white/60" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Stats Bar */}
+                  <div className="relative z-10 flex items-center gap-4 mt-5">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/5">
+                      <Users size={11} className="text-primary-blue" />
+                      <span className="text-[9px] font-black text-white/70">{leaderboard.length} <span className="text-white/30">PARTICIPANTS</span></span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/5">
+                      <Hash size={11} className="text-primary-blue" />
+                      <span className="text-[9px] font-black text-white/70">{code?.toUpperCase()} <span className="text-white/30">ACCESS CODE</span></span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/5">
+                      <BarChart2 size={11} className="text-primary-blue" />
+                      <span className="text-[9px] font-black text-white/70">{quiz?.questions?.length || 0} <span className="text-white/30">QUESTIONS</span></span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Table */}
+                <div className="flex-1 overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="sticky top-0 z-10">
+                      <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 py-3 px-4 text-left w-16">Rank</th>
+                        <th className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 py-3 px-4 text-left">Participant</th>
+                        <th className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 py-3 px-4 text-center w-24">Score</th>
+                        <th className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 py-3 px-4 text-center w-20">Medal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leaderboard.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="text-center py-20">
+                            <Users size={32} className="mx-auto text-slate-200 mb-3" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">No participants yet</p>
+                          </td>
+                        </tr>
+                      ) : leaderboard.map((player, index) => (
+                        <tr
+                          key={player.id}
+                          className={`border-b border-slate-50 transition-colors hover:bg-blue-50/50 ${
+                            index === 0 ? 'bg-amber-50/60' : index === 1 ? 'bg-slate-50/40' : index === 2 ? 'bg-orange-50/30' : ''
+                          }`}
+                        >
+                          <td className="py-3.5 px-4">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs ${
+                              index === 0 ? 'bg-amber-400 text-white' : 
+                              index === 1 ? 'bg-slate-400 text-white' : 
+                              index === 2 ? 'bg-orange-400 text-white' : 
+                              'bg-slate-100 text-slate-400'
+                            }`}>
+                              {index + 1}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black ${
+                                index === 0 ? 'bg-amber-100 text-amber-700' : 'bg-primary-blue/10 text-primary-blue'
+                              }`}>
+                                {(player.full_name || '?')[0]?.toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-[#0F172A] leading-tight">{player.full_name}</p>
+                                <p className="text-[8px] font-black uppercase tracking-widest text-slate-300 mt-0.5">ID: {player.id?.toString().substring(0, 8)}...</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span className={`text-lg font-black tabular-nums ${
+                              index === 0 ? 'text-amber-500' : 'text-[#0F172A]'
+                            }`}>
+                              {player.total_score || 0}
+                            </span>
+                            <p className="text-[7px] font-black uppercase text-slate-300 mt-0.5">Points</p>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            {index === 0 && <Crown size={18} className="mx-auto text-amber-400" />}
+                            {index === 1 && <Medal size={18} className="mx-auto text-slate-400" />}
+                            {index === 2 && <Award size={18} className="mx-auto text-orange-400" />}
+                            {index > 2 && <span className="text-[9px] font-black text-slate-300">—</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Modal Footer */}
+                <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                  <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400">Skill Forge • {new Date().toLocaleDateString()}</p>
+                  <button
+                    onClick={exportToPDF}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#0F172A] hover:bg-[#1E293B] text-white rounded-lg text-[8px] font-black uppercase tracking-[0.2em] transition-all"
+                  >
+                    <FileDown size={10} />
+                    Download as PDF
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
     </div>
   );
 }
