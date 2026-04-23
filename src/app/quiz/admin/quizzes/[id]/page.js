@@ -19,7 +19,16 @@ import {
   Clock,
   Users,
   Lock,
-  FileUp
+  FileUp,
+  Trophy,
+  Award,
+  Medal,
+  Eye,
+  X,
+  Crown,
+  BarChart2,
+  History,
+  Calendar
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -40,6 +49,11 @@ export default function QuizConfigurePage({ params }) {
   
   const [editingQuestionId, setEditingQuestionId] = useState(null);
   const [participantsCount, setParticipantsCount] = useState(0);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [participantHistory, setParticipantHistory] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [activeResultTab, setActiveResultTab] = useState('leaderboard');
   
   const supabase = createClient();
   const router = useRouter();
@@ -64,6 +78,9 @@ export default function QuizConfigurePage({ params }) {
       .eq("quiz_id", id);
     setParticipantsCount(count || 0);
 
+    // Fetch leaderboard data
+    await fetchLeaderboardData(id);
+
     // Fetch Questions
     const { data: questionData, error: qErr } = await supabase
       .from("questions")
@@ -74,6 +91,50 @@ export default function QuizConfigurePage({ params }) {
     if (qErr) console.error("Question retrieval error:", qErr);
     setQuestions(questionData || []);
     setLoading(false);
+  };
+
+  const fetchLeaderboardData = async (quizId) => {
+    setLeaderboardLoading(true);
+    try {
+      // Fetch all submissions with profile data
+      const { data: subs } = await supabase
+        .from("submissions")
+        .select("*, profiles!user_id(full_name, email)")
+        .eq("quiz_id", quizId)
+        .order("total_score", { ascending: false })
+        .order("time_taken", { ascending: true });
+
+      // Build leaderboard: aggregate by user_id
+      const scoreMap = {};
+      const historyList = [];
+      (subs || []).forEach(s => {
+        const uid = s.user_id;
+        const name = s.profiles?.full_name || `Node-${uid?.toString().substring(0, 6)}`;
+        const email = s.profiles?.email || '';
+        if (!scoreMap[uid]) {
+          scoreMap[uid] = { id: uid, full_name: name, email, total_score: 0, submissions: 0, last_seen: s.submitted_at };
+        }
+        scoreMap[uid].total_score += (s.total_score || s.points || 0);
+        scoreMap[uid].submissions += 1;
+        if (s.submitted_at > (scoreMap[uid].last_seen || '')) scoreMap[uid].last_seen = s.submitted_at;
+
+        historyList.push({
+          id: s.id,
+          user_id: uid,
+          full_name: name,
+          score: s.total_score || s.points || 0,
+          time_taken: s.time_taken,
+          submitted_at: s.submitted_at || s.created_at
+        });
+      });
+
+      const sorted = Object.values(scoreMap).sort((a, b) => b.total_score - a.total_score);
+      setLeaderboard(sorted);
+      setParticipantHistory(historyList.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at)));
+    } catch (err) {
+      console.error("Leaderboard fetch error:", err);
+    }
+    setLeaderboardLoading(false);
   };
 
   const handleUpdateAccessKey = async (newKey) => {
@@ -350,6 +411,14 @@ export default function QuizConfigurePage({ params }) {
                          disabled={submitting}
                        />
                      </label>
+
+                     <button
+                       onClick={() => { setShowLeaderboard(true); fetchLeaderboardData(id); }}
+                       className="bg-[#0F172A] text-white px-4 md:px-6 py-2 md:py-2.5 rounded-[12px] md:rounded-[16px] flex items-center justify-center gap-2 shadow-xl hover:bg-[#1E293B] active:scale-95 transition-all text-[9px] md:text-xs font-black uppercase tracking-widest"
+                     >
+                       <Trophy size={14} />
+                       <span className="hidden sm:inline">Leaderboard</span>
+                     </button>
                    </div>
                  )}
               </div>
@@ -552,6 +621,210 @@ export default function QuizConfigurePage({ params }) {
                </div>
             </div>
          </div>
+
+         {/* Leaderboard & History Modal */}
+         <AnimatePresence>
+           {showLeaderboard && (
+             <motion.div
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
+               onClick={() => setShowLeaderboard(false)}
+             >
+               <div className="absolute inset-0 bg-[#020617]/80 backdrop-blur-xl" />
+               <motion.div
+                 initial={{ opacity: 0, scale: 0.92, y: 30 }}
+                 animate={{ opacity: 1, scale: 1, y: 0 }}
+                 exit={{ opacity: 0, scale: 0.92, y: 30 }}
+                 className="relative w-full max-w-3xl max-h-[88vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                 onClick={(e) => e.stopPropagation()}
+               >
+                 {/* Modal Header */}
+                 <div className="bg-[#0F172A] p-6 relative overflow-hidden flex-shrink-0">
+                   <div className="absolute inset-0 opacity-10">
+                     <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500 rounded-full blur-3xl" />
+                     <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-emerald-500 rounded-full blur-3xl" />
+                   </div>
+                   <div className="relative z-10 flex items-center justify-between">
+                     <div className="flex items-center gap-3">
+                       <div className="p-2 bg-white/10 rounded-xl border border-white/10">
+                         <Trophy className="w-5 h-5 text-amber-400" />
+                       </div>
+                       <div>
+                         <p className="text-[7px] font-black uppercase tracking-[0.5em] text-white/40 mb-0.5">Session Results</p>
+                         <h2 className="text-lg font-black text-white uppercase tracking-tight leading-none">{quiz?.title || 'Quiz Results'}</h2>
+                       </div>
+                     </div>
+                     <button onClick={() => setShowLeaderboard(false)} className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-all">
+                       <X size={14} className="text-white/60" />
+                     </button>
+                   </div>
+
+                   {/* Stats */}
+                   <div className="relative z-10 flex items-center gap-3 mt-4">
+                     <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 rounded-lg border border-white/5">
+                       <Users size={10} className="text-blue-400" />
+                       <span className="text-[8px] font-black text-white/70">{leaderboard.length} <span className="text-white/30">PARTICIPANTS</span></span>
+                     </div>
+                     <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 rounded-lg border border-white/5">
+                       <Hash size={10} className="text-blue-400" />
+                       <span className="text-[8px] font-black text-white/70">{quiz?.access_code || 'N/A'} <span className="text-white/30">CODE</span></span>
+                     </div>
+                     <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 rounded-lg border border-white/5">
+                       <BarChart2 size={10} className="text-blue-400" />
+                       <span className="text-[8px] font-black text-white/70">{questions.length} <span className="text-white/30">QUESTIONS</span></span>
+                     </div>
+                   </div>
+
+                   {/* Tab Switcher */}
+                   <div className="relative z-10 flex gap-2 mt-4">
+                     <button
+                       onClick={() => setActiveResultTab('leaderboard')}
+                       className={`px-4 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-1.5 ${
+                         activeResultTab === 'leaderboard' ? 'bg-white text-[#0F172A]' : 'bg-white/5 text-white/50 hover:bg-white/10'
+                       }`}
+                     >
+                       <Trophy size={10} /> Leaderboard
+                     </button>
+                     <button
+                       onClick={() => setActiveResultTab('history')}
+                       className={`px-4 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-1.5 ${
+                         activeResultTab === 'history' ? 'bg-white text-[#0F172A]' : 'bg-white/5 text-white/50 hover:bg-white/10'
+                       }`}
+                     >
+                       <History size={10} /> Attendance History
+                     </button>
+                   </div>
+                 </div>
+
+                 {/* Content */}
+                 <div className="flex-1 overflow-y-auto">
+                   {leaderboardLoading ? (
+                     <div className="flex flex-col items-center justify-center py-20 gap-3">
+                       <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                       <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Loading data...</p>
+                     </div>
+                   ) : activeResultTab === 'leaderboard' ? (
+                     <table className="w-full">
+                       <thead className="sticky top-0 z-10">
+                         <tr className="bg-slate-50 border-b border-slate-100">
+                           <th className="text-[7px] font-black uppercase tracking-[0.3em] text-slate-400 py-2.5 px-4 text-left w-14">Rank</th>
+                           <th className="text-[7px] font-black uppercase tracking-[0.3em] text-slate-400 py-2.5 px-4 text-left">Participant</th>
+                           <th className="text-[7px] font-black uppercase tracking-[0.3em] text-slate-400 py-2.5 px-4 text-center w-24">Score</th>
+                           <th className="text-[7px] font-black uppercase tracking-[0.3em] text-slate-400 py-2.5 px-4 text-center w-24">Attempts</th>
+                           <th className="text-[7px] font-black uppercase tracking-[0.3em] text-slate-400 py-2.5 px-4 text-center w-16">Medal</th>
+                         </tr>
+                       </thead>
+                       <tbody>
+                         {leaderboard.length === 0 ? (
+                           <tr>
+                             <td colSpan={5} className="text-center py-16">
+                               <Users size={28} className="mx-auto text-slate-200 mb-2" />
+                               <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300">No participants yet</p>
+                             </td>
+                           </tr>
+                         ) : leaderboard.map((player, index) => (
+                           <tr
+                             key={player.id}
+                             className={`border-b border-slate-50 transition-colors hover:bg-blue-50/50 ${
+                               index === 0 ? 'bg-amber-50/50' : index === 1 ? 'bg-slate-50/30' : index === 2 ? 'bg-orange-50/20' : ''
+                             }`}
+                           >
+                             <td className="py-3 px-4">
+                               <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[10px] ${
+                                 index === 0 ? 'bg-amber-400 text-white' :
+                                 index === 1 ? 'bg-slate-400 text-white' :
+                                 index === 2 ? 'bg-orange-400 text-white' :
+                                 'bg-slate-100 text-slate-400'
+                               }`}>
+                                 {index + 1}
+                               </div>
+                             </td>
+                             <td className="py-3 px-4">
+                               <div className="flex items-center gap-2.5">
+                                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black ${
+                                   index === 0 ? 'bg-amber-100 text-amber-700' : 'bg-blue-50 text-blue-600'
+                                 }`}>
+                                   {(player.full_name || '?')[0]?.toUpperCase()}
+                                 </div>
+                                 <div>
+                                   <p className="text-xs font-bold text-[#0F172A] leading-tight">{player.full_name}</p>
+                                   <p className="text-[7px] font-black uppercase tracking-widest text-slate-300 mt-0.5">{player.email || `ID: ${player.id?.toString().substring(0, 8)}`}</p>
+                                 </div>
+                               </div>
+                             </td>
+                             <td className="py-3 px-4 text-center">
+                               <span className={`text-base font-black tabular-nums ${index === 0 ? 'text-amber-500' : 'text-[#0F172A]'}`}>
+                                 {player.total_score || 0}
+                               </span>
+                             </td>
+                             <td className="py-3 px-4 text-center">
+                               <span className="text-xs font-black text-slate-500 tabular-nums">{player.submissions}</span>
+                             </td>
+                             <td className="py-3 px-4 text-center">
+                               {index === 0 && <Crown size={16} className="mx-auto text-amber-400" />}
+                               {index === 1 && <Medal size={16} className="mx-auto text-slate-400" />}
+                               {index === 2 && <Award size={16} className="mx-auto text-orange-400" />}
+                               {index > 2 && <span className="text-[8px] font-black text-slate-300">—</span>}
+                             </td>
+                           </tr>
+                         ))}
+                       </tbody>
+                     </table>
+                   ) : (
+                     /* History Tab */
+                     <div className="divide-y divide-slate-50">
+                       {participantHistory.length === 0 ? (
+                         <div className="text-center py-16">
+                           <History size={28} className="mx-auto text-slate-200 mb-2" />
+                           <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300">No attendance records</p>
+                         </div>
+                       ) : participantHistory.map((entry, idx) => (
+                         <div key={entry.id || idx} className="flex items-center justify-between px-6 py-3 hover:bg-slate-50/50 transition-colors">
+                           <div className="flex items-center gap-3">
+                             <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-[10px] font-black text-blue-600">
+                               {(entry.full_name || '?')[0]?.toUpperCase()}
+                             </div>
+                             <div>
+                               <p className="text-xs font-bold text-[#0F172A] leading-tight">{entry.full_name}</p>
+                               <div className="flex items-center gap-2 mt-0.5">
+                                 <Calendar size={8} className="text-slate-300" />
+                                 <p className="text-[7px] font-black text-slate-400 uppercase tracking-wider">
+                                   {entry.submitted_at ? new Date(entry.submitted_at).toLocaleString() : 'Unknown'}
+                                 </p>
+                               </div>
+                             </div>
+                           </div>
+                           <div className="flex items-center gap-4">
+                             {entry.time_taken && (
+                               <div className="text-right">
+                                 <p className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Time</p>
+                                 <p className="text-[10px] font-black text-[#0F172A]">{entry.time_taken}s</p>
+                               </div>
+                             )}
+                             <div className="text-right">
+                               <p className="text-[7px] font-black text-slate-400 uppercase tracking-wider">Score</p>
+                               <p className="text-sm font-black text-blue-600">{entry.score}</p>
+                             </div>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   )}
+                 </div>
+
+                 {/* Modal Footer */}
+                 <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between flex-shrink-0">
+                   <p className="text-[7px] font-black uppercase tracking-[0.3em] text-slate-400">Skill Forge • {new Date().toLocaleDateString()}</p>
+                   <div className="flex items-center gap-2">
+                     <span className="text-[7px] font-black uppercase tracking-[0.2em] text-slate-400">{participantHistory.length} total submissions</span>
+                   </div>
+                 </div>
+               </motion.div>
+             </motion.div>
+           )}
+         </AnimatePresence>
     </div>
   );
 }
