@@ -120,7 +120,7 @@ export default function ReportsPage() {
     const pastedData = e.clipboardData.getData("text");
     
     if (pastedData.length > 100) {
-      setPasteErrorMessage("cannot paste more than 100 characters at once");
+      setPasteErrorMessage("you cannot paste more than 100 characters at a time");
       setShowPasteWarning(true);
       setTimeout(() => setShowPasteWarning(false), 3000);
       return;

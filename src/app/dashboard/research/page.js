@@ -30,12 +30,12 @@ export default function ResearchPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const [lastPasteTime, setLastPasteTime] = useState(0);
+  const [pastingField, setPastingField] = useState(null);
 
   const textareaRef = useRef(null);
 
   const DEFAULT_TOPIC = "ADVANCED RESEARCH & SYNTHESIS PROTOCOL";
-  const PASTE_LIMIT = 50000;
+  const PASTE_LIMIT = 100;
 
   const RESEARCH_BLOCKS = [
     { id: 'overview', label: 'Research Overview', min: 10000, placeholder: 'Provide a comprehensive overview of your research findings...' },
@@ -96,12 +96,16 @@ export default function ResearchPage() {
     setResearchData(prev => ({ ...prev, [id]: value }));
   };
 
-  const handlePaste = (e) => {
+  const handlePaste = (e, blockId) => {
     const pastedText = e.clipboardData.getData("text");
     if (pastedText.length > PASTE_LIMIT) {
        e.preventDefault();
-       setError(`SYSTEM ALERT: Paste volume exceeded safety buffer.`);
-       setTimeout(() => setError(null), 3000);
+       setPastingField(blockId);
+       setError("you cannot paste more than 100 characters at a time");
+       setTimeout(() => {
+         setError(null);
+         setPastingField(null);
+       }, 5000);
     }
   };
 
@@ -117,7 +121,7 @@ export default function ResearchPage() {
     const { error: updateError } = await supabase
       .from("profiles")
       .update({ 
-        round2_content: researchData,
+        round2_content: JSON.stringify(researchData),
         round2_status: 'submitted',
         round2_topic: profile?.round2_topic || DEFAULT_TOPIC
       })
@@ -187,7 +191,7 @@ export default function ResearchPage() {
             {[
               { icon: Zap, text: "Aggregate target: 28,000 characters.", color: "text-amber-500", bg: "bg-amber-50", border: "border-amber-100" },
               { icon: BookOpen, text: "Overview block: 10,000 character minimum.", color: "text-blue-500", bg: "bg-blue-50", border: "border-blue-100" },
-              { icon: Copy, text: "Limitations, Apps, Future: 6,000 chars each.", color: "text-indigo-500", bg: "bg-indigo-50", border: "border-indigo-100" },
+              { icon: Copy, text: "Paste restriction: Max 100 chars per action.", color: "text-indigo-500", bg: "bg-indigo-50", border: "border-indigo-100" },
               { icon: Clock, text: "Commit once all protocols are green.", color: "text-emerald-500", bg: "bg-emerald-50", border: "border-emerald-100" }
             ].map((rule, i) => (
               <div key={i} className="flex items-center gap-4 group transition-all hover:scale-[1.02]">
@@ -215,11 +219,29 @@ export default function ResearchPage() {
                   <textarea
                     value={researchData[block.id]}
                     onChange={(e) => handleFieldChange(block.id, e.target.value)}
-                    onPaste={handlePaste}
+                    onPaste={(e) => handlePaste(e, block.id)}
                     disabled={profile?.round2_status === 'submitted' || success}
                     placeholder={block.placeholder}
                     className="w-full bg-white border-2 border-[#F1F5F9] rounded-[24px] p-8 min-h-[300px] text-lg font-medium leading-relaxed focus:outline-none focus:border-[#2563EB]/30 focus:ring-4 focus:ring-blue-50 transition-all placeholder:text-[#CBD5E1] shadow-sm selection:bg-blue-100 resize-none"
                   />
+                  
+                  <AnimatePresence>
+                    {error && pastingField === block.id && (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                        className="absolute inset-0 z-50 bg-white/90 backdrop-blur-sm rounded-[24px] flex flex-col items-center justify-center text-center p-8 border-2 border-rose-100 shadow-xl"
+                      >
+                         <div className="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mb-4 text-rose-500">
+                            <AlertCircle size={32} className="animate-pulse" />
+                         </div>
+                         <h4 className="text-sm font-black uppercase tracking-[0.2em] text-rose-600 mb-1">Security Protocol</h4>
+                         <p className="text-xl font-black text-[#0F172A] uppercase tracking-tight leading-tight max-w-xs">{error}</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   <div className="absolute bottom-4 left-6 right-6 h-1 bg-slate-50 rounded-full overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
@@ -276,28 +298,41 @@ export default function ResearchPage() {
               </button>
             </div>
           </div>
+        </div>
 
+        {/* Fixed Notifications Overlay */}
+        <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] w-full max-w-xl px-6 pointer-events-none">
           <AnimatePresence>
-            {error && (
+            {error && !pastingField && (
               <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="bg-rose-50 border border-rose-100 p-6 rounded-2xl flex items-start gap-4 text-rose-600"
+                initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 50, scale: 0.9 }}
+                className="bg-white border-2 border-rose-100 shadow-[0_30px_60px_-15px_rgba(225,29,72,0.3)] p-8 rounded-[32px] flex items-center gap-6 text-rose-600 pointer-events-auto mb-4"
               >
-                <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
-                <p className="text-[11px] font-black uppercase tracking-widest leading-relaxed">{error}</p>
+                <div className="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <AlertCircle size={28} className="animate-pulse" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-1">Security Alert</span>
+                  <p className="text-lg font-black uppercase tracking-tight leading-none text-[#0F172A]">{error}</p>
+                </div>
               </motion.div>
             )}
             
             {success && (
               <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl flex items-start gap-4 text-emerald-600"
+                initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className="bg-white border-2 border-emerald-100 shadow-[0_30px_60px_-15px_rgba(16,185,129,0.3)] p-8 rounded-[32px] flex items-center gap-6 text-emerald-600 pointer-events-auto"
               >
-                <CheckCircle2 size={20} className="flex-shrink-0 mt-0.5" />
-                <p className="text-[11px] font-black uppercase tracking-widest leading-relaxed">RESEARCH COMMITTED SUCCESSFULLY. NODE SYNCHRONIZATION COMPLETE.</p>
+                <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 size={28} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-1">Success Protocol</span>
+                  <p className="text-lg font-black uppercase tracking-tight leading-none text-[#0F172A]">RESEARCH COMMITTED SUCCESSFULLY</p>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

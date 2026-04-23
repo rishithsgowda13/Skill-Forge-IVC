@@ -43,7 +43,7 @@ export default function Round2SelectionPage() {
         .find((row) => row.startsWith("mock_session="))
         ?.split("=")[1];
       
-      const isMockAdmin = mockSession === "admin";
+      const isMockAdmin = mockSession?.startsWith("admin");
       
       if (!user && !isMockAdmin) {
         router.push("/auth");
@@ -216,16 +216,30 @@ export default function Round2SelectionPage() {
       return;
     }
 
-    const headers = ["Candidate Name", "Email", "Topic", "Research Content", "Status"];
+    const headers = ["Candidate Name", "Email", "Topic", "Overview", "Gaps & Limitations", "Real-world Application", "Future Enhancements", "Status"];
     const csvRows = [headers.join(",")];
 
     submittedUsers.forEach(u => {
+      let research = { overview: "", gaps: "", application: "", future: "" };
+      try {
+        if (u.round2_content) {
+          research = typeof u.round2_content === 'string' 
+            ? JSON.parse(u.round2_content) 
+            : u.round2_content;
+        }
+      } catch (e) {
+        research.overview = u.round2_content; // Fallback
+      }
+
       const row = [
-        `"${u.full_name || ''}"`,
-        `"${u.email || ''}"`,
-        `"${u.round2_topic || ''}"`,
-        `"${(u.round2_content || '').replace(/"/g, '""')}"`, // Escape quotes for CSV
-        `"${u.round2_status || ''}"`
+        `"${(u.full_name || '').replace(/"/g, '""')}"`,
+        `"${(u.email || '').replace(/"/g, '""')}"`,
+        `"${(u.round2_topic || '').replace(/"/g, '""')}"`,
+        `"${(research.overview || '').replace(/"/g, '""')}"`,
+        `"${(research.gaps || '').replace(/"/g, '""')}"`,
+        `"${(research.application || '').replace(/"/g, '""')}"`,
+        `"${(research.future || '').replace(/"/g, '""')}"`,
+        `"${(u.round2_status || '').replace(/"/g, '""')}"`
       ];
       csvRows.push(row.join(","));
     });
@@ -249,12 +263,26 @@ export default function Round2SelectionPage() {
     }
 
     const headers = ["Field", "Value"];
+    let research = { overview: "", gaps: "", application: "", future: "" };
+    try {
+      if (user.round2_content) {
+        research = typeof user.round2_content === 'string' 
+          ? JSON.parse(user.round2_content) 
+          : user.round2_content;
+      }
+    } catch (e) {
+      research.overview = user.round2_content;
+    }
+
     const data = [
       ["Candidate Name", user.full_name],
       ["Email", user.email],
       ["Assigned Topic", user.round2_topic],
       ["Protocol Status", user.round2_status],
-      ["Research Content", user.round2_content]
+      ["Research Overview", research.overview],
+      ["Gaps & Limitations", research.gaps],
+      ["Real-world Application", research.application],
+      ["Future Enhancements", research.future]
     ];
 
     const csvRows = headers.join(",") + "\n" + 

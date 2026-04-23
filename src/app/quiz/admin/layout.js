@@ -17,7 +17,7 @@ export default function AdminLayout({ children }) {
         .find((row) => row.startsWith("mock_session="))
         ?.split("=")[1];
       
-      const isMockAdmin = mockSession === "admin";
+      const isMockAdmin = mockSession?.startsWith("admin");
       
       if (!user && !isMockAdmin) {
         router.push("/login");
