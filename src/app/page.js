@@ -285,14 +285,7 @@ export default function LoginPage() {
  
                <div className="text-center pt-2 flex flex-col items-center">
                  <div className="flex items-center gap-2 text-[10px] font-black text-slate-300 uppercase tracking-widest leading-relaxed">
-                   <span>{isSignUp ? "Already Enrolled?" : "New Node?"}</span>
-                   <button 
-                     type="button"
-                     onClick={() => setIsSignUp(!isSignUp)}
-                     className="text-blue-600 hover:text-blue-700 transition-colors cursor-pointer font-extrabold"
-                   >
-                     {isSignUp ? "Sync Credentials" : "Enroll Node"}
-                   </button>
+                   <span>Registration is strictly restricted to authorized nodes only.</span>
                  </div>
                </div>
              </div>
