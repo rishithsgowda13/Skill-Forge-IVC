@@ -35,37 +35,7 @@ export default function AdminQuizzesPage() {
   const router = useRouter();
 
   useEffect(() => {
-    async function checkAuth() {
-      const { data: { user } } = await supabase.auth.getUser();
-      const mockSession = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("mock_session="))
-        ?.split("=")[1];
-      
-      const isMockAdmin = mockSession === "admin";
-      
-      if (!user && !isMockAdmin) {
-        router.push("/login");
-        return;
-      }
-
-      if (user && !isMockAdmin) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-        
-        if (profile?.role !== "admin") {
-          router.push("/");
-          return;
-        }
-      }
-      
-      loadQuizzes();
-    }
-
-    checkAuth();
+    loadQuizzes();
   }, []);
 
   async function loadQuizzes() {
