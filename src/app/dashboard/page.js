@@ -56,7 +56,8 @@ export default function DashboardPage() {
     const cookies = document.cookie.split(';');
     const sessionCookie = cookies.find(c => c.trim().startsWith('mock_session='));
     if (sessionCookie) {
-      setRole(sessionCookie.split('=')[1]);
+      const val = sessionCookie.split('=')[1];
+      setRole(val.split(':')[0]);
     }
 
     async function loadData() {
