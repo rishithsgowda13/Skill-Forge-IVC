@@ -60,52 +60,38 @@ export default function AdminHostPage() {
     return quiz.questions.find(q => q.order_index === quiz.current_question_index) || null;
   }, [quiz?.questions, quiz?.current_question_index]);
 
-  const fetchLeaderboard = useCallback(async (quizId, currentPresentUsers = null) => {
-    const { data, error } = await supabase
+  const fetchLeaderboard = useCallback(async (quizId) => {
+    // 1. Fetch all submissions with profiles for names
+    const { data: subs, error } = await supabase
       .from("submissions")
       .select("user_id, points, profiles!user_id(full_name)")
       .eq("quiz_id", quizId);
 
-    const usersToMerge = currentPresentUsers || presentUsersRef.current;
-    const presentIds = usersToMerge.map(u => u.id).filter(id => id && !id.startsWith('guest-') && !id.startsWith('mock_'));
-    
-    let profilesData = [];
-    if (presentIds.length > 0) {
-      const { data: pData } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', presentIds);
-      profilesData = pData || [];
+    if (error) {
+      console.error("fetchLeaderboard Error:", error);
+      return;
     }
 
+    // 2. Aggregate scores by user_id
     const leaderboardMap = new Map();
-    data?.forEach(sub => {
+    subs?.forEach(sub => {
       const uid = sub.user_id;
-      const current = leaderboardMap.get(uid) || { points: 0 };
+      const current = leaderboardMap.get(uid) || { points: 0, full_name: null };
+      
       leaderboardMap.set(uid, {
         points: current.points + (sub.points || 0),
-        full_name: sub.profiles?.full_name
+        full_name: sub.profiles?.full_name || current.full_name
       });
     });
 
-    usersToMerge.forEach(u => {
-      if (!leaderboardMap.has(u.id)) {
-        leaderboardMap.set(u.id, { points: 0, full_name: u.full_name });
-      }
-    });
-
-    const finalData = Array.from(leaderboardMap.entries()).map(([uid, stats]) => {
-      const directProfile = profilesData.find(p => p.id === uid);
-      const fullName = directProfile?.full_name || stats.full_name || `Node-${uid.toString().substring(0, 5)}`;
-      
-      return {
-        id: uid,
-        user_id: uid,
-        full_name: fullName,
-        total_score: stats.points,
-        points: stats.points
-      };
-    }).sort((a, b) => b.total_score - a.total_score);
+    // 3. Convert to array and sort
+    const finalData = Array.from(leaderboardMap.entries()).map(([uid, stats]) => ({
+      id: uid,
+      user_id: uid,
+      full_name: stats.full_name || `Node-${uid.toString().substring(0, 5)}`,
+      total_score: stats.points,
+      points: stats.points
+    })).sort((a, b) => b.total_score - a.total_score);
 
     setLeaderboard(finalData);
   }, [supabase]);
@@ -192,7 +178,7 @@ export default function AdminHostPage() {
              const now = Date.now();
              if (now - (window._lastLeaderboardFetch || 0) > 2000) {
                 window._lastLeaderboardFetch = now;
-                fetchLeaderboard(quizData.id, users);
+                fetchLeaderboard(quizData.id);
              }
           }
         })
@@ -353,10 +339,10 @@ export default function AdminHostPage() {
         });
         const users = Object.entries(usersMap).map(([id, full_name]) => ({ id, full_name }));
         setPresentUsers(users);
-        await fetchLeaderboard(quizData.id, users);
-      } else {
         await fetchLeaderboard(quizData.id);
-      }
+       } else {
+         await fetchLeaderboard(quizData.id);
+       }
     }
     
     setTimeout(() => setRefreshing(false), 1000);

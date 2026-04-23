@@ -226,9 +226,9 @@ export default function CandidatePlayPage() {
     const answer = String.fromCharCode(65 + optionIndex);
     const isCorrect = answer === currentQuestion.correct_answer;
     
-    const timeLimit = currentQuestion.time_limit || 15;
-    const basePoints = timeLimit * 10;
-    const pointsEarned = isCorrect ? Math.max(10, basePoints - (Math.floor(elapsed) * 10)) : 0;
+    // Tiered Scoring Logic (0-3s: 100, 3-6s: 95, 6-9s: 90, etc.)
+    const pointsTier = Math.floor(elapsed / 3);
+    const pointsEarned = isCorrect ? Math.max(10, 100 - (pointsTier * 5)) : 0;
     
     try {
       // Use UPSERT logic via delete-insert pattern for robustness across all sessions
