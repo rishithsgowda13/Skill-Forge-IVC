@@ -30,11 +30,36 @@ export default function ResearchPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [lastPasteTime, setLastPasteTime] = useState(0);
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   const textareaRef = useRef(null);
 
   const TARGET_CHARS = 10000;
   const PASTE_LIMIT = 100;
+
+  // Deadline: 8 am, 24th April 2026
+  const DEADLINE = new Date("2026-04-24T08:00:00").getTime();
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = DEADLINE - now;
+
+      if (distance < 0) {
+        clearInterval(timer);
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      } else {
+        setTimeLeft({
+          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((distance % (1000 * 60)) / 1000)
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [DEADLINE]);
 
   useEffect(() => {
     async function loadProfile() {
@@ -179,6 +204,57 @@ export default function ResearchPage() {
            </div>
         </div>
       </header>
+
+      {/* AI Warning and Deadline Countdown */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-50 border border-amber-200 p-6 rounded-[28px] flex items-center gap-5 shadow-sm"
+        >
+          <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 flex-shrink-0">
+            <AlertCircle size={24} />
+          </div>
+          <div>
+            <h3 className="text-[11px] font-black text-amber-800 uppercase tracking-widest mb-1">Integrity Protocol</h3>
+            <p className="text-sm font-bold text-amber-900/70 leading-snug">
+              Please avoid AI generating as the reports will be checked for Plagiarism.
+            </p>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-rose-50 border border-rose-200 p-6 rounded-[28px] flex items-center gap-5 shadow-sm"
+        >
+          <div className="w-12 h-12 bg-rose-100 rounded-2xl flex items-center justify-center text-rose-600 flex-shrink-0">
+            <Clock size={24} />
+          </div>
+          <div className="flex-1">
+            <div className="flex justify-between items-center mb-1">
+              <h3 className="text-[11px] font-black text-rose-800 uppercase tracking-widest">Submission Deadline</h3>
+              <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">24th April, 08:00 AM</span>
+            </div>
+            <div className="flex gap-3">
+              {[
+                { label: "D", value: timeLeft.days },
+                { label: "H", value: timeLeft.hours },
+                { label: "M", value: timeLeft.minutes },
+                { label: "S", value: timeLeft.seconds }
+              ].map((unit, i) => (
+                <div key={i} className="flex flex-col items-center">
+                  <span className="text-lg font-black text-rose-900 tabular-nums leading-none">
+                    {String(unit.value).padStart(2, '0')}
+                  </span>
+                  <span className="text-[7px] font-black text-rose-400 uppercase tracking-tighter mt-0.5">{unit.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </div>
 
       <main className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-10">
         <div className="space-y-6">
