@@ -172,7 +172,7 @@ export default function ResearchPage() {
   const isProtocolComplete = RESEARCH_BLOCKS.every(block => researchData[block.id].length >= block.min);
 
   return (
-    <div className="p-8 md:p-14 space-y-10">
+    <div className="p-4 md:p-14 space-y-10">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-[#F1F5F9] pb-10">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
@@ -186,25 +186,25 @@ export default function ResearchPage() {
                 </div>
              )}
           </div>
-          <h1 className="text-5xl font-black text-[#0F172A] uppercase leading-none max-w-2xl">
+          <h1 className="text-3xl md:text-5xl font-black text-[#0F172A] uppercase leading-none max-w-2xl">
             SECONDARY RESEARCH
           </h1>
           <div className="flex flex-col gap-2">
              <span className="text-[9px] font-black text-[#94A3B8] uppercase tracking-[0.4em]">ALLOCATED TOPIC</span>
-             <h2 className="text-xl font-bold text-[#2563EB] leading-tight max-w-3xl">
+             <h2 className="text-lg md:text-xl font-bold text-[#2563EB] leading-tight max-w-3xl">
                {profile?.round2_topic || "Why is this not soo good"}
              </h2>
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
-           <div className="bg-white border border-[#E2E8F0] px-8 py-4 rounded-[24px] shadow-sm flex flex-col items-center min-w-[140px]">
-              <span className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">Total Progress</span>
-              <span className="text-2xl font-black text-[#0F172A] tabular-nums">{Math.floor((totalChars / requiredChars) * 100)}%</span>
+        <div className="flex items-center gap-3 md:gap-6">
+           <div className="bg-white border border-[#E2E8F0] px-4 py-3 md:px-8 md:py-4 rounded-[20px] md:rounded-[24px] shadow-sm flex flex-col items-center min-w-[100px] md:min-w-[140px]">
+              <span className="text-[8px] md:text-[9px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">Total Progress</span>
+              <span className="text-lg md:text-2xl font-black text-[#0F172A] tabular-nums">{Math.floor((totalChars / requiredChars) * 100)}%</span>
            </div>
-           <div className="bg-[#0F172A] text-white px-8 py-4 rounded-[24px] shadow-2xl flex flex-col items-center min-w-[140px]">
-              <span className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Target Aggregate</span>
-              <span className="text-2xl font-black tabular-nums">{requiredChars.toLocaleString()}</span>
+           <div className="bg-[#0F172A] text-white px-4 py-3 md:px-8 md:py-4 rounded-[20px] md:rounded-[24px] shadow-2xl flex flex-col items-center min-w-[100px] md:min-w-[140px]">
+              <span className="text-[8px] md:text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Target Aggregate</span>
+              <span className="text-lg md:text-2xl font-black tabular-nums">{requiredChars.toLocaleString()}</span>
            </div>
         </div>
       </header>
