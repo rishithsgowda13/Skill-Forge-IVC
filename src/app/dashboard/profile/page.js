@@ -44,54 +44,98 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
-      let activeUser = user;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        let activeUser = user;
 
-      if (!activeUser) {
-        const cookies = document.cookie.split(';');
-        const mockSession = cookies.find(c => c.trim().startsWith('mock_session='));
-        if (mockSession) {
-          const { data: mockProfile } = await supabase.from("profiles").select("*").limit(1).single();
-          activeUser = { id: mockProfile?.id || "mock_id", email: "candidate@skillforge.io" };
-        }
-      }
-
-      if (activeUser) {
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", activeUser.id)
-          .single();
-        
-        if (profileData) {
-          setProfile(profileData);
-          setFormData({
-            full_name: profileData.full_name || "",
-            phone_number: profileData.phone_number || "",
-            college: profileData.college || "",
-            branch: profileData.branch || "",
-            section: profileData.section || "",
-            skills: profileData.skills || "",
-            role: profileData.role || "candidate"
-          });
-          
-          const { data: subs } = await supabase
-            .from("submissions")
-            .select("total_score, quizzes(total_questions)")
-            .eq("user_id", activeUser.id);
+        if (!activeUser) {
+          const cookies = document.cookie.split(';');
+          const mockSession = cookies.find(c => c.trim().startsWith('mock_session='));
+          if (mockSession) {
+            const [rolePart, idPart] = mockSession.split('=')[1].split(':');
+            const mockId = idPart || "1";
             
-          if (subs && subs.length > 0) {
-            const totalQuestions = subs.reduce((acc, s) => acc + (s.quizzes?.total_questions || 10), 0);
-            const totalScore = subs.reduce((acc, s) => acc + s.total_score, 0);
-            setStats({
-              sessions: subs.length,
-              accuracy: Math.round((totalScore / totalQuestions) * 100),
-              rank: `#${1000 + (subs.length * 7) % 500}`
-            });
+            const { data: mockProfile } = await supabase.from("profiles").select("*").limit(1).single();
+            if (mockProfile) {
+              activeUser = { id: mockProfile.id, email: mockProfile.email || "candidate@skillforge.io" };
+            } else {
+              // Fallback for mock sessions when DB is empty or profile missing
+              const fallbackProfile = {
+                id: `mock_${mockId}`,
+                full_name: `can ${mockId}`,
+                email: `candidate${mockId}@skillforge.io`,
+                role: rolePart || "candidate",
+                college: "NEXUS Academy",
+                branch: "Cyber Security",
+                section: `Gamma-${mockId}`,
+                phone_number: "+91 99999 99999"
+              };
+              setProfile(fallbackProfile);
+              setFormData({ ...fallbackProfile, skills: "" });
+              setLoading(false);
+              return;
+            }
           }
         }
+
+        if (activeUser) {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", activeUser.id)
+            .single();
+          
+          if (profileData) {
+            setProfile(profileData);
+            setFormData({
+              full_name: profileData.full_name || "",
+              phone_number: profileData.phone_number || "",
+              college: profileData.college || "",
+              branch: profileData.branch || "",
+              section: profileData.section || "",
+              skills: profileData.skills || "",
+              role: profileData.role || "candidate"
+            });
+            
+            const { data: subs } = await supabase
+              .from("submissions")
+              .select("total_score, quizzes(total_questions)")
+              .eq("user_id", activeUser.id);
+              
+            if (subs && subs.length > 0) {
+              const totalQuestions = subs.reduce((acc, s) => acc + (s.quizzes?.total_questions || 10), 0);
+              const totalScore = subs.reduce((acc, s) => acc + s.total_score, 0);
+              setStats({
+                sessions: subs.length,
+                accuracy: Math.round((totalScore / totalQuestions) * 100),
+                rank: `#${1000 + (subs.length * 7) % 500}`
+              });
+            }
+          } else if (!user) {
+             // Mock session context
+             const cookies = document.cookie.split(';');
+             const mockSession = cookies.find(c => c.trim().startsWith('mock_session='));
+             const idPart = mockSession?.split('=')[1]?.split(':')[1] || "1";
+             
+             const fallbackProfile = {
+               id: activeUser.id,
+               full_name: `can ${idPart}`,
+               email: activeUser.email,
+               role: "candidate",
+               college: "NEXUS Academy",
+               branch: "Cyber Security",
+               section: `Gamma-${idPart}`,
+               phone_number: "+91 99999 99999"
+             };
+             setProfile(fallbackProfile);
+             setFormData({ ...fallbackProfile, skills: "" });
+          }
+        }
+      } catch (err) {
+        console.error("INIT ERROR:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     init();
   }, []);

@@ -58,6 +58,8 @@ export default function AdminHostPage() {
   }, [status, currentQuestion?.id]);
 
   useEffect(() => {
+    let active = true;
+
     async function loadHostData() {
       const { data: quizData } = await supabase
         .from("quizzes")
@@ -65,6 +67,7 @@ export default function AdminHostPage() {
         .eq("access_code", code.toUpperCase())
         .single();
       
+      if (!active) return;
       if (!quizData) {
         router.push("/quiz/admin/quizzes");
         return;
@@ -87,6 +90,15 @@ export default function AdminHostPage() {
 
       // Subscribe to communications and presence
       const canal_id = `quiz_session_${code.toUpperCase()}`;
+      
+      // Remove any existing instance with this name first to prevent callback conflicts
+      const existingChannel = supabase.getChannels().find(c => c.name === canal_id);
+      if (existingChannel) {
+        await supabase.removeChannel(existingChannel);
+      }
+      
+      if (!active) return;
+
       const channel = supabase
         .channel(canal_id)
         .on(
@@ -142,8 +154,8 @@ export default function AdminHostPage() {
       });
 
       const heartbeat = setInterval(() => {
-        if (quizRef.current) {
-          channel.send({
+        if (quizRef.current && channelRef.current) {
+          channelRef.current.send({
             type: 'broadcast',
             event: 'state_update',
             payload: quizRef.current
@@ -152,6 +164,7 @@ export default function AdminHostPage() {
       }, 10000);
 
       return () => {
+        active = false;
         if (channelRef.current) {
           supabase.removeChannel(channelRef.current);
           channelRef.current = null;
@@ -161,6 +174,10 @@ export default function AdminHostPage() {
       };
     }
     loadHostData();
+
+    return () => {
+      active = false;
+    };
   }, [code]);
 
   async function fetchLeaderboard(quizId, currentPresentUsers = null) {
@@ -169,7 +186,9 @@ export default function AdminHostPage() {
       .select("user_id, points, profiles!user_id(full_name)")
       .eq("quiz_id", quizId);
 
-    const presentIds = (currentPresentUsers || presentUsers).map(u => u.id).filter(id => !id.startsWith('guest-'));
+    const usersToMerge = currentPresentUsers || presentUsers;
+    const presentIds = usersToMerge.map(u => u.id).filter(id => id && !id.startsWith('guest-') && !id.startsWith('mock_'));
+    
     let profilesData = [];
     if (presentIds.length > 0) {
       const { data: pData } = await supabase
@@ -181,7 +200,7 @@ export default function AdminHostPage() {
 
     if (error) {
       console.warn("LEADERBOARD SYNC WARNING:", error.message);
-      setLeaderboard(currentPresentUsers || []);
+      setLeaderboard(usersToMerge);
       return;
     }
 
@@ -192,11 +211,10 @@ export default function AdminHostPage() {
       return acc;
     }, {});
 
-    const usersToMerge = currentPresentUsers || presentUsers;
     const allUserIds = new Set([
       ...Object.keys(scoreMap),
       ...usersToMerge.map(u => u.id)
-    ]);
+    ].filter(id => id));
 
     const merged = Array.from(allUserIds).map(uid => {
       const pres = usersToMerge.find(u => u.id === uid);
@@ -565,7 +583,7 @@ export default function AdminHostPage() {
        </div>
 
         {/* Global Registry Sidebar */}
-        <div className="w-full lg:w-[420px] bg-[#020617] lg:bg-white text-white lg:text-[#0F172A] flex flex-col p-8 md:p-10 overflow-hidden relative border-l border-white/5 lg:border-gray-100">
+        <div className="w-full lg:w-[350px] bg-[#020617] lg:bg-white text-white lg:text-[#0F172A] flex flex-col p-6 overflow-hidden relative border-l border-white/5 lg:border-gray-100">
           <div className="relative z-10 mb-6 md:mb-8">
              <div className="flex items-center gap-4 mb-8">
                 <div className="p-2 bg-primary-blue/10 lg:bg-blue-50 rounded-[14px]">
@@ -619,7 +637,7 @@ export default function AdminHostPage() {
              </div>
           </div>
 
-          <div className="flex-1 space-y-3.5 overflow-y-auto pr-1 custom-scrollbar-hide relative z-10 py-1">
+          <div className="flex-1 space-y-2.5 overflow-y-auto pr-1 custom-scrollbar-hide relative z-10 py-1">
              <AnimatePresence mode="wait">
                 {activeRegistryTab === 'leaderboard' ? (
                    <motion.div 
@@ -627,7 +645,7 @@ export default function AdminHostPage() {
                      initial={{ opacity: 0, x: 20 }}
                      animate={{ opacity: 1, x: 0 }}
                      exit={{ opacity: 0, x: -20 }}
-                     className="space-y-3.5"
+                     className="space-y-2.5"
                    >
                       {leaderboard.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-10 py-20">

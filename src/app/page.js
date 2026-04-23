@@ -53,7 +53,13 @@ export default function LoginPage() {
     // Mock bypass logic - ONLY for basic testing, default to user
     if (!isSignUp) {
       if (email === "1" && password === "1") {
-        document.cookie = "mock_session=user; path=/";
+        document.cookie = "mock_session=user:1; path=/";
+        router.push("/dashboard");
+        return;
+      }
+
+      if (email === "9" && password === "9") {
+        document.cookie = "mock_session=user:9; path=/";
         router.push("/dashboard");
         return;
       }

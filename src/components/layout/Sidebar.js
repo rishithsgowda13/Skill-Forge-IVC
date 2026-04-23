@@ -46,7 +46,10 @@ export default function Sidebar() {
       const cookies = document.cookie.split(';');
       const sessionCookie = cookies.find(c => c.trim().startsWith('mock_session='));
       if (sessionCookie) {
-        setRole(sessionCookie.split('=')[1]);
+        const val = sessionCookie.split('=')[1];
+        const [r, id] = val.split(':');
+        setRole(r || "user");
+        if (id) setUserName(`can ${id}`);
       }
       setIsMounted(true);
     }

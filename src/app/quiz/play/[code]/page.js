@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,18 +32,33 @@ export default function CandidatePlayPage() {
   const [resultsActive, setResultsActive] = useState(false);
   const [score, setScore] = useState(0);
   const [leaderboard, setLeaderboard] = useState([]);
+  const channelRef = useRef(null);
 
   useEffect(() => {
-    let channel;
+    let active = true;
     
     async function init() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!active) return;
         
-        const sessionUser = user || { 
+        let sessionUser = authUser || { 
           id: `guest-${Math.random().toString(36).substr(2, 9)}`, 
           email: "guest@skillforge.io" 
         };
+
+        // Check for mock session bypass
+        const cookies = document.cookie.split(';');
+        const mockSession = cookies.find(c => c.trim().startsWith('mock_session='));
+        if (mockSession && !authUser) {
+          const idPart = mockSession.split('=')[1].split(':')[1] || "1";
+          sessionUser = {
+            id: `mock_${idPart}`,
+            email: `candidate${idPart}@skillforge.io`,
+            isMock: true
+          };
+        }
+        
         setUser(sessionUser);
 
         // Fetch Quiz
@@ -53,6 +68,7 @@ export default function CandidatePlayPage() {
           .eq("access_code", code?.toUpperCase())
           .single();
         
+        if (!active) return;
         if (qErr || !quizData) {
           console.error("Quiz retrieval failure:", qErr);
           router.push("/quiz/access");
@@ -63,24 +79,33 @@ export default function CandidatePlayPage() {
 
         // Fetch profile
         let sessionName = "Candidate";
-        if (user) {
+        if (authUser) {
           const { data: profile } = await supabase
             .from('profiles')
             .select('full_name')
-            .eq('id', user.id)
+            .eq('id', authUser.id)
             .single();
           if (profile?.full_name) sessionName = profile.full_name;
+        } else if (sessionUser.isMock) {
+          sessionName = `can ${sessionUser.id.split('_')[1]}`;
         } else {
           sessionName = `Guest-${sessionUser.id.split('-')[1]}`;
         }
+        if (!active) return;
 
-        // Initialize Channel - Remove any existing instance first to prevent callback conflicts
-        const existingChannel = supabase.getChannels().find(c => c.name === `quiz_session_${code.toUpperCase()}`);
+        // Initialize Channel
+        const canal_id = `quiz_session_${code.toUpperCase()}`;
+        
+        // Remove any existing instance with this name first
+        const existingChannel = supabase.getChannels().find(c => c.name === canal_id);
         if (existingChannel) {
           await supabase.removeChannel(existingChannel);
         }
         
-        channel = supabase.channel(`quiz_session_${code.toUpperCase()}`);
+        if (!active) return;
+
+        const channel = supabase.channel(canal_id);
+        channelRef.current = channel;
         
         channel
           .on(
@@ -128,15 +153,17 @@ export default function CandidatePlayPage() {
         setLoading(false);
       } catch (err) {
         console.error("CRITICAL SYNC ERROR:", err);
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
     if (code) init();
 
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
+      active = false;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
     };
   }, [code]);
@@ -299,30 +326,34 @@ export default function CandidatePlayPage() {
          active={quiz?.status === 'showing-question'} 
          onViolation={async (count, type) => {
            console.warn(`INTEGRITY ALERT: ${type} breach count ${count}`);
-           const channel = supabase.channel(`quiz_session_${code.toUpperCase()}`);
-           await channel.send({
-             type: 'broadcast',
-             event: 'violation_detected',
-             payload: {
-               userId: user.id,
-               userName: user.email || 'Candidate',
-               type,
-               count,
-               timestamp: new Date().toISOString()
-             }
-           });
-         }}
-         onTermination={async () => {
-             const channel = supabase.channel(`quiz_session_${code.toUpperCase()}`);
+           const channel = channelRef.current;
+           if (channel) {
              await channel.send({
                type: 'broadcast',
-               event: 'session_terminated',
+               event: 'violation_detected',
                payload: {
                  userId: user.id,
                  userName: user.email || 'Candidate',
+                 type,
+                 count,
                  timestamp: new Date().toISOString()
                }
              });
+           }
+         }}
+         onTermination={async () => {
+             const channel = channelRef.current;
+             if (channel) {
+               await channel.send({
+                 type: 'broadcast',
+                 event: 'session_terminated',
+                 payload: {
+                   userId: user.id,
+                   userName: user.email || 'Candidate',
+                   timestamp: new Date().toISOString()
+                 }
+               });
+             }
          }}
        />
        
