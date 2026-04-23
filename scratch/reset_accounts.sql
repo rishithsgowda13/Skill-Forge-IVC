@@ -1,5 +1,5 @@
 -- ==========================================
--- SKILL FORGE: FIXED MASTER RESET v5
+-- SKILL FORGE: FIXED MASTER RESET v6
 -- ==========================================
 
 -- 0. PRE-REQUISITES
@@ -81,13 +81,13 @@ FROM public.submissions s
 JOIN public.profiles p ON s.user_id = p.id
 JOIN public.questions q ON s.question_id = q.id;
 
--- 3. PROVISIONING PHASE (40 Users)
+-- 3. PROVISIONING PHASE (41 Users)
 DO $$
 DECLARE
     u_id UUID;
     i INTEGER := 0;
     
-    -- Array of 40 users
+    -- Array of 41 users
     emails TEXT[] := ARRAY[
         'vvce25ec0089@vvce.ac.in', 'vvce25cse0005@vvce.ac.in', '7anikets555@gmail.com',
         'vvce25cse0129@vvce.ac.in', 'vvce25cse0342@vvce.ac.in', 'vvce25cse0296@vvce.ac.in',
@@ -102,7 +102,7 @@ DECLARE
         'vvce25cse0491@vvce.ac.in', 'vvce25cse0388@vvce.ac.in', 'vvce25cseaiml0182@vvce.ac.in',
         'vvce25cse0191@vvce.ac.in', 'ushahusha2007@gmail.com', 'vvce25cse0247@vvce.ac.in',
         'vvce25cseaiml0149@vvce.ac.in', 'varshanandann18@gmail.com', 'manohari1009@gmail.com',
-        'bharathece2006@gmail.com'
+        'bharathece2006@gmail.com', 'vvce25cse0639@vvce.ac.in'
     ];
     
     -- Array of problem statements to allocate
