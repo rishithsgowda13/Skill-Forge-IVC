@@ -25,11 +25,9 @@ export default function ClientLayoutWrapper({ children }) {
       <Sidebar />
       <motion.main 
         initial={false}
-        animate={{ 
-          paddingLeft: typeof window !== 'undefined' && window.innerWidth < 1024 ? "0px" : (isExpanded ? "240px" : "72px")
-        }}
-        transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="flex-1 min-h-screen overflow-y-auto custom-scrollbar w-full relative pb-[100px] lg:pb-0"
+        className={`flex-1 min-h-screen overflow-y-auto custom-scrollbar w-full relative pb-[100px] lg:pb-0 transition-[padding] duration-300 ease-in-out ${
+          isExpanded ? "lg:pl-[240px]" : "lg:pl-[72px]"
+        } pl-0`}
       >
         <div className="w-full max-w-full overflow-x-hidden">
           {children}
