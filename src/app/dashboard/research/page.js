@@ -52,8 +52,8 @@ export default function ResearchPage() {
     future: ""
   });
 
-  // Deadline: 5 pm, 24th April 2026
-  const DEADLINE = new Date("2026-04-24T17:00:00").getTime();
+  // Deadline: 9 pm, 24th April 2026
+  const DEADLINE = new Date("2026-04-24T21:00:00").getTime();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -244,7 +244,7 @@ export default function ResearchPage() {
           <div className="flex-1">
             <div className="flex justify-between items-center mb-1">
               <h3 className="text-[11px] font-black text-rose-800 uppercase tracking-widest">Submission Deadline</h3>
-              <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">24th April, 05:00 PM</span>
+              <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">24th April, 09:00 PM</span>
             </div>
             <div className="flex gap-3">
               {[
