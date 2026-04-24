@@ -52,8 +52,8 @@ export default function ResearchPage() {
     future: ""
   });
 
-  // Deadline: 8 am, 24th April 2026
-  const DEADLINE = new Date("2026-04-24T08:00:00").getTime();
+  // Deadline: 5 pm, 24th April 2026
+  const DEADLINE = new Date("2026-04-24T17:00:00").getTime();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -135,6 +135,11 @@ export default function ResearchPage() {
   };
 
   const handleSubmit = async () => {
+    if (new Date().getTime() >= DEADLINE) {
+      setError("SUBMISSION WINDOW CLOSED: The deadline for research submission has passed.");
+      return;
+    }
+
     const missing = RESEARCH_BLOCKS.filter(block => researchData[block.id].length < block.min);
     
     if (missing.length > 0) {
@@ -239,7 +244,7 @@ export default function ResearchPage() {
           <div className="flex-1">
             <div className="flex justify-between items-center mb-1">
               <h3 className="text-[11px] font-black text-rose-800 uppercase tracking-widest">Submission Deadline</h3>
-              <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">24th April, 08:00 AM</span>
+              <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">24th April, 05:00 PM</span>
             </div>
             <div className="flex gap-3">
               {[
@@ -296,7 +301,7 @@ export default function ResearchPage() {
                     value={researchData[block.id]}
                     onChange={(e) => handleFieldChange(block.id, e.target.value)}
                     onPaste={(e) => handlePaste(e, block.id)}
-                    disabled={profile?.round2_status === 'submitted' || success}
+                    disabled={profile?.round2_status === 'submitted' || success || new Date().getTime() >= DEADLINE}
                     placeholder={block.placeholder}
                     className="w-full bg-white border-2 border-[#F1F5F9] rounded-[24px] p-6 md:p-8 min-h-[300px] text-base md:text-lg font-medium leading-relaxed focus:outline-none focus:border-[#2563EB]/30 focus:ring-4 focus:ring-blue-50 transition-all placeholder:text-[#CBD5E1] shadow-sm selection:bg-blue-100 resize-none"
                   />
@@ -344,10 +349,12 @@ export default function ResearchPage() {
             <div className="pt-4 border-t border-[#E2E8F0]">
               <button
                 onClick={handleSubmit}
-                disabled={submitting || profile?.round2_status === 'submitted' || success || !isProtocolComplete}
+                disabled={submitting || profile?.round2_status === 'submitted' || success || !isProtocolComplete || new Date().getTime() >= DEADLINE}
                 className={`w-full py-4 rounded-xl font-black text-[10px] tracking-[0.3em] uppercase transition-all flex items-center justify-center gap-3 shadow-lg active:scale-95 ${
                   profile?.round2_status === 'submitted' || success
                   ? "bg-emerald-500 text-white cursor-not-allowed"
+                  : new Date().getTime() >= DEADLINE
+                  ? "bg-rose-500 text-white cursor-not-allowed"
                   : !isProtocolComplete
                   ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
                   : "bg-[#2563EB] text-white hover:bg-blue-600 shadow-blue-200"
@@ -359,6 +366,11 @@ export default function ResearchPage() {
                   <>
                     <CheckCircle2 size={16} />
                     <span>Submission Sync Complete</span>
+                  </>
+                ) : new Date().getTime() >= DEADLINE ? (
+                  <>
+                    <Lock size={14} />
+                    <span>Submission Closed</span>
                   </>
                 ) : !isProtocolComplete ? (
                   <>
