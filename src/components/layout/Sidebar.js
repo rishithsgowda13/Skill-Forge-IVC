@@ -79,7 +79,6 @@ export default function Sidebar() {
     { href: "/quiz/admin/round3", label: "R3 Selection", icon: UserCheck },
     { href: "/quiz/admin/interview", label: "Interview Panel", icon: Star },
     { href: "/quiz/admin/profiles", label: "Member Profiles", icon: LayoutGrid },
-    { href: "/quiz/admin/security", label: "Security Audit", icon: ShieldCheck },
   ];
 
   const candidateItems = [
