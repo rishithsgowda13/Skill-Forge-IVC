@@ -66,9 +66,50 @@ export default function LoginPage() {
         return;
       }
       
-      const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) { 
-        setError(error.message.toUpperCase()); 
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (signInError) { 
+        // If login fails, check if this is a pre-registered member attempting first-time login
+        if (password === email) {
+          const { data: registryProfile } = await supabase
+            .from('member_registry')
+            .select('*')
+            .eq('email', email)
+            .single();
+
+          if (registryProfile) {
+            // AUTO-INITIALIZE: Create the Auth account on the fly
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+              email,
+              password, // which is also the email
+              options: { data: { full_name: registryProfile.full_name, role: 'candidate' } }
+            });
+
+            if (!signUpError && signUpData.user) {
+              // Move data to profiles
+              await supabase.from('profiles').insert([{
+                id: signUpData.user.id,
+                full_name: registryProfile.full_name,
+                email: email,
+                usn: registryProfile.usn,
+                role: 'candidate',
+                skill_profile: registryProfile.skill_profile,
+                created_at: new Date().toISOString()
+              }]);
+              // Clean up registry
+              await supabase.from('member_registry').delete().eq('email', email);
+              
+              // Now sign in for real
+              const { error: finalError } = await supabase.auth.signInWithPassword({ email, password });
+              if (!finalError) {
+                router.push("/dashboard");
+                return;
+              }
+            }
+          }
+        }
+        
+        setError(signInError.message.toUpperCase()); 
         setLoading(false); 
       }
       else { 
@@ -105,13 +146,37 @@ export default function LoginPage() {
         setLoading(false); 
       }
       else if (authData.user) { 
-        await supabase.from('profiles').insert([{
-          id: authData.user.id,
-          full_name: fullName,
-          email: email,
-          role: 'candidate',
-          created_at: new Date().toISOString()
-        }]);
+        // Check if a profile with this email exists in member_registry (pre-created by admin)
+        const { data: registryProfile } = await supabase
+          .from('member_registry')
+          .select('*')
+          .eq('email', email)
+          .single();
+
+        if (registryProfile) {
+          // Move registry data to profiles
+          await supabase.from('profiles').insert([{
+            id: authData.user.id,
+            full_name: fullName,
+            email: email,
+            usn: registryProfile.usn,
+            role: 'candidate',
+            skill_profile: registryProfile.skill_profile,
+            created_at: new Date().toISOString()
+          }]);
+
+          // Clean up registry
+          await supabase.from('member_registry').delete().eq('email', email);
+        } else {
+          // Create a new standard profile
+          await supabase.from('profiles').insert([{
+            id: authData.user.id,
+            full_name: fullName,
+            email: email,
+            role: 'candidate',
+            created_at: new Date().toISOString()
+          }]);
+        }
 
         setSuccessMessage("Sync Complete: Node established."); 
         setLoading(false); 
