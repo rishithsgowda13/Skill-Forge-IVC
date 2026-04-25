@@ -105,26 +105,29 @@ export default function LoginPage() {
         setLoading(false); 
       }
       else if (authData.user) { 
-        // Check if a profile with this email already exists (pre-created by admin)
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('id')
+        // Check if a profile with this email exists in member_registry (pre-created by admin)
+        const { data: registryProfile } = await supabase
+          .from('member_registry')
+          .select('*')
           .eq('email', email)
           .single();
 
-        if (existingProfile) {
-          // Claim the existing profile
-          await supabase
-            .from('profiles')
-            .update({
-              id: authData.user.id,
-              full_name: fullName,
-              role: 'candidate', // Ensure they have the correct role
-              created_at: new Date().toISOString()
-            })
-            .eq('email', email);
+        if (registryProfile) {
+          // Move registry data to profiles
+          await supabase.from('profiles').insert([{
+            id: authData.user.id,
+            full_name: fullName,
+            email: email,
+            usn: registryProfile.usn,
+            role: 'candidate',
+            skill_profile: registryProfile.skill_profile,
+            created_at: new Date().toISOString()
+          }]);
+
+          // Clean up registry
+          await supabase.from('member_registry').delete().eq('email', email);
         } else {
-          // Create a new profile
+          // Create a new standard profile
           await supabase.from('profiles').insert([{
             id: authData.user.id,
             full_name: fullName,

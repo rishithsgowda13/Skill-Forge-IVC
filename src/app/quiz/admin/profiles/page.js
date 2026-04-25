@@ -452,18 +452,13 @@ function AddMemberModal({ isOpen, onClose, onAdd }) {
 
     const cleanSkills = skills.filter(s => s.skill && s.rating > 0);
     
-    // Generate a temporary ID (UUID format)
-    const tempId = crypto.randomUUID();
-
     const { error: insertError } = await supabase
-      .from('profiles')
+      .from('member_registry')
       .insert([{
-        id: tempId,
         full_name: name.trim(),
         email: email.trim().toLowerCase(),
         usn: usn.trim().toUpperCase(),
-        role: 'candidate',
-        skill_profile: JSON.stringify(cleanSkills),
+        skill_profile: cleanSkills,
         created_at: new Date().toISOString()
       }]);
 
@@ -471,7 +466,7 @@ function AddMemberModal({ isOpen, onClose, onAdd }) {
       setError(insertError.message);
       setLoading(false);
     } else {
-      onAdd({ id: tempId, full_name: name, email, usn, skill_profile: cleanSkills });
+      onAdd({ full_name: name, email, usn, skill_profile: cleanSkills });
       onClose();
     }
   };
@@ -637,18 +632,29 @@ function ProfileCard({ candidate, onSave, onDelete }) {
 
   async function handleSave() {
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({ full_name: name.trim(), usn: usn.trim() }).eq("id", candidate.id);
+    const table = candidate.is_registry ? "member_registry" : "profiles";
+    const { error } = await supabase.from(table).update({ full_name: name.trim(), usn: usn.trim() }).eq(candidate.is_registry ? "email" : "id", candidate.is_registry ? candidate.email : candidate.id);
     if (error) { showToast("Failed to save changes.", "error"); }
-    else { showToast("Profile updated!", "success"); onSave(candidate.id, { full_name: name.trim(), usn: usn.trim() }); setEditing(false); }
+    else { showToast("Profile updated!", "success"); onSave(candidate.id || candidate.email, { full_name: name.trim(), usn: usn.trim() }); setEditing(false); }
     setSaving(false);
   }
 
   async function handleDelete() {
     if (!confirmDelete) { setConfirmDelete(true); return; }
     setDeleting(true);
-    const { error } = await supabase.from("profiles").update({ skill_profile: null }).eq("id", candidate.id);
+    const table = candidate.is_registry ? "member_registry" : "profiles";
+    
+    let error;
+    if (candidate.is_registry) {
+      const { error: err } = await supabase.from(table).delete().eq("email", candidate.email);
+      error = err;
+    } else {
+      const { error: err } = await supabase.from(table).update({ skill_profile: null }).eq("id", candidate.id);
+      error = err;
+    }
+
     if (error) { showToast("Delete failed.", "error"); setDeleting(false); }
-    else { onDelete(candidate.id); }
+    else { onDelete(candidate.id || candidate.email); }
   }
 
   function showToast(msg, type) { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }
@@ -784,14 +790,22 @@ export default function AdminProfilesPage() {
       const mockSession = document.cookie.split("; ").find((r) => r.startsWith("mock_session="))?.split("=")[1];
       if (!user && !mockSession?.startsWith("admin")) { router.push("/auth"); return; }
 
-      const { data } = await supabase
+      const { data: profData } = await supabase
         .from("profiles")
         .select("*")
         .eq("role", "candidate")
-        .not("skill_profile", "is", null)
-        .order("full_name", { ascending: true });
+        .not("skill_profile", "is", null);
 
-      const withRatedSkills = (data || []).filter((c) => {
+      const { data: regData } = await supabase
+        .from("member_registry")
+        .select("*");
+
+      const combined = [
+        ...(profData || []).map(p => ({ ...p, is_registry: false })),
+        ...(regData || []).map(r => ({ ...r, is_registry: true }))
+      ].sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+
+      const withRatedSkills = combined.filter((c) => {
         try {
           const parsed = typeof c.skill_profile === "string" ? JSON.parse(c.skill_profile) : c.skill_profile;
           return Array.isArray(parsed) && parsed.some((s) => s.skill && s.rating > 0);
