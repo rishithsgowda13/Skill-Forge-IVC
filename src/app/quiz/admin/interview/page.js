@@ -18,6 +18,7 @@ import {
   Award,
   UserCheck,
   Plus,
+  Tag,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -33,6 +34,18 @@ const SKILL_CATEGORIES = {
 };
 
 const SKILL_OPTIONS = Object.values(SKILL_CATEGORIES).flat();
+const DOMAIN_NAMES = Object.keys(SKILL_CATEGORIES);
+
+// Domain color map
+const DOMAIN_COLORS = {
+  "Programming": "bg-blue-50 text-blue-600 border-blue-200",
+  "Web Tech": "bg-cyan-50 text-cyan-600 border-cyan-200",
+  "Data & AI": "bg-purple-50 text-purple-600 border-purple-200",
+  "Cloud & DevOps": "bg-orange-50 text-orange-600 border-orange-200",
+  "Design & Product": "bg-pink-50 text-pink-600 border-pink-200",
+  "Soft Skills": "bg-emerald-50 text-emerald-600 border-emerald-200",
+  "Specialized": "bg-amber-50 text-amber-600 border-amber-200",
+};
 
 // ─── Star rating ──────────────────────────────────────────────────────────────
 function StarRating({ rating, onRate, disabled = false }) {
@@ -70,11 +83,12 @@ function StarRating({ rating, onRate, disabled = false }) {
   );
 }
 
-// ─── Portal dropdown — renders at root so nothing clips it ───────────────────
-function SkillDropdown({ value, onChange, usedSkills }) {
+// ─── Portal dropdown with custom skill + domain mapping ─────────────────────
+function SkillDropdown({ value, onChange, usedSkills, domain, onDomainChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
+  const [showDomainPicker, setShowDomainPicker] = useState(false);
   const triggerRef = useRef(null);
 
   const available = SKILL_OPTIONS.filter(
@@ -82,11 +96,13 @@ function SkillDropdown({ value, onChange, usedSkills }) {
             s.toLowerCase().includes(search.toLowerCase())
   );
 
+  const isCustom = search.trim().length > 0 && available.length === 0;
+
   const open = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
-    const dropH = Math.min(available.length * 38 + 60, 260);
+    const dropH = 300;
     const openUp = spaceBelow < dropH && rect.top > dropH;
     setDropPos({
       top: openUp ? rect.top - dropH - 4 : rect.bottom + 4,
@@ -95,14 +111,25 @@ function SkillDropdown({ value, onChange, usedSkills }) {
       openUp,
     });
     setIsOpen(true);
-  }, [available.length]);
+  }, []);
 
   const close = useCallback(() => {
     setIsOpen(false);
     setSearch("");
+    setShowDomainPicker(false);
   }, []);
 
   const toggle = () => (isOpen ? close() : open());
+
+  const handleCustomSkill = (selectedDomain) => {
+    const customName = search.trim();
+    onChange(customName);
+    onDomainChange(selectedDomain);
+    close();
+  };
+
+  // Find domain for current value
+  const currentDomain = domain || DOMAIN_NAMES.find(d => SKILL_CATEGORIES[d].includes(value)) || null;
 
   return (
     <>
@@ -118,9 +145,16 @@ function SkillDropdown({ value, onChange, usedSkills }) {
             : "border-dashed border-[#E2E8F0] bg-[#F8FAFC] hover:border-violet-300"
         }`}
       >
-        <span className={`text-xs font-semibold ${value ? "text-[#0F172A]" : "text-[#94A3B8]"}`}>
-          {value || "Select a skill…"}
-        </span>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className={`text-xs font-semibold truncate ${value ? "text-[#0F172A]" : "text-[#94A3B8]"}`}>
+            {value || "Select a skill…"}
+          </span>
+          {value && currentDomain && (
+            <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border flex-shrink-0 ${DOMAIN_COLORS[currentDomain] || "bg-slate-50 text-slate-500 border-slate-200"}`}>
+              {currentDomain}
+            </span>
+          )}
+        </div>
         <ChevronDown
           size={13}
           className={`text-[#94A3B8] transition-transform flex-shrink-0 ml-2 ${isOpen ? "rotate-180" : ""}`}
@@ -141,37 +175,80 @@ function SkillDropdown({ value, onChange, usedSkills }) {
               }}
               className="bg-white border-2 border-[#E2E8F0] rounded-2xl shadow-2xl overflow-hidden"
             >
+              {/* Search */}
               <div className="p-2.5 border-b border-[#F1F5F9]">
                 <div className="flex items-center gap-2 bg-[#F8FAFC] rounded-xl px-3 py-1.5 border border-[#F1F5F9]">
                   <Search size={12} className="text-[#94A3B8] flex-shrink-0" />
                   <input
                     autoFocus
                     type="text"
-                    placeholder="Search skills…"
+                    placeholder="Search or type a custom skill…"
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => { setSearch(e.target.value); setShowDomainPicker(false); }}
                     className="bg-transparent text-xs font-semibold w-full outline-none placeholder:text-[#CBD5E1]"
                   />
                 </div>
               </div>
-              <div className="max-h-52 overflow-y-auto">
-                {available.length === 0 ? (
+
+              <div className="max-h-60 overflow-y-auto">
+                {/* Existing skills */}
+                {available.map((skill) => (
+                  <button
+                    key={skill}
+                    type="button"
+                    onClick={() => { onChange(skill); onDomainChange(null); close(); }}
+                    className={`w-full text-left px-4 py-2 text-xs font-semibold transition-colors hover:bg-violet-50 hover:text-violet-700 flex items-center justify-between ${
+                      skill === value ? "bg-violet-50 text-violet-700" : "text-[#64748B]"
+                    }`}
+                  >
+                    <span>{skill}</span>
+                    <span className="text-[7px] font-black text-[#CBD5E1] uppercase">
+                      {DOMAIN_NAMES.find(d => SKILL_CATEGORIES[d].includes(skill))}
+                    </span>
+                  </button>
+                ))}
+
+                {/* Custom skill option */}
+                {isCustom && !showDomainPicker && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDomainPicker(true)}
+                    className="w-full text-left px-4 py-3 text-xs font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 transition-colors flex items-center gap-2 border-t border-[#F1F5F9]"
+                  >
+                    <Plus size={12} />
+                    Add "<span className="font-black">{search.trim()}</span>" as custom skill →
+                  </button>
+                )}
+
+                {/* Domain picker for custom skill */}
+                {isCustom && showDomainPicker && (
+                  <div className="border-t border-[#F1F5F9] p-3 space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Tag size={11} className="text-violet-500" />
+                      <p className="text-[9px] font-black text-[#0F172A] uppercase tracking-widest">
+                        Map "<span className="text-violet-600">{search.trim()}</span>" to a domain:
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {DOMAIN_NAMES.map((d) => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => handleCustomSkill(d)}
+                          className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all hover:scale-[1.02] active:scale-95 ${DOMAIN_COLORS[d]}`}
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No results fallback */}
+                {available.length === 0 && !isCustom && (
                   <div className="py-5 text-center text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
                     No match
                   </div>
-                ) : (
-                  available.map((skill) => (
-                    <button
-                      key={skill}
-                      type="button"
-                      onClick={() => { onChange(skill); close(); }}
-                      className={`w-full text-left px-4 py-2 text-xs font-semibold transition-colors hover:bg-violet-50 hover:text-violet-700 ${
-                        skill === value ? "bg-violet-50 text-violet-700" : "text-[#64748B]"
-                      }`}
-                    >
-                      {skill}
-                    </button>
-                  ))
                 )}
               </div>
             </div>
@@ -248,6 +325,13 @@ export default function InterviewPanelPage() {
       return { ...p, [uid]: arr };
     });
 
+  const setDomain = (uid, idx, domain) =>
+    setSkillProfiles((p) => {
+      const arr = [...(p[uid] || empty())];
+      arr[idx] = { ...arr[idx], domain };
+      return { ...p, [uid]: arr };
+    });
+
   const addSlot = (uid) =>
     setSkillProfiles((p) => ({
       ...p,
@@ -303,7 +387,7 @@ export default function InterviewPanelPage() {
             Skill <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Profiling</span>
           </h1>
           <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.4em] mt-2">
-            Dynamic Assessment · Sector Mapping Enabled
+            Dynamic Assessment · Custom Skills · Domain Mapping
           </p>
         </div>
         <div className="bg-white border border-[#E2E8F0] px-4 py-2 rounded-2xl flex items-center gap-2 w-full lg:w-72 shadow-sm">
@@ -380,7 +464,7 @@ export default function InterviewPanelPage() {
                       <Sparkles size={14} className="text-violet-500" />
                       <span className="text-[10px] font-black text-[#0F172A] uppercase tracking-[0.2em]">Competency Matrix</span>
                     </div>
-                    <span className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest">{used.length} Skills Profiled</span>
+                    <span className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest">{used.length} Skills</span>
                   </div>
 
                   <div className="grid grid-cols-1 gap-2">
@@ -397,6 +481,8 @@ export default function InterviewPanelPage() {
                           value={slot.skill}
                           onChange={(skill) => setSkill(candidate.id, idx, skill)}
                           usedSkills={used}
+                          domain={slot.domain}
+                          onDomainChange={(domain) => setDomain(candidate.id, idx, domain)}
                         />
                         <StarRating
                           rating={slot.rating}
