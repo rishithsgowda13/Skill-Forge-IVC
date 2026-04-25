@@ -420,6 +420,18 @@ function AddMemberModal({ isOpen, onClose, onAdd }) {
   const [error, setError] = useState(null);
   const supabase = createClient();
 
+  // Reset state when modal opens to avoid showing old data
+  useEffect(() => {
+    if (isOpen) {
+      setName("");
+      setEmail("");
+      setUsn("");
+      setSkills([{ skill: "", rating: 0 }]);
+      setError(null);
+      setLoading(false);
+    }
+  }, [isOpen]);
+
   const handleAddSkill = () => setSkills([...skills, { skill: "", rating: 0 }]);
   const handleRemoveSkill = (idx) => {
     const newSkills = [...skills];
