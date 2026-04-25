@@ -630,8 +630,46 @@ function ProfileCard({ candidate, onSave, onDelete }) {
   const [radarOpen, setRadarOpen] = useState(false);
   const [name, setName] = useState(candidate.full_name || "");
   const [usn, setUsn] = useState(candidate.usn || "");
+  const [editableSkills, setEditableSkills] = useState([]);
   const [toast, setToast] = useState(null);
   const supabase = createClient();
+
+  // Sync editable skills when editing starts
+  useEffect(() => {
+    if (editing) {
+      let currentSkills = [];
+      try {
+        if (candidate.skill_profile) {
+          const parsed = typeof candidate.skill_profile === "string"
+              ? JSON.parse(candidate.skill_profile) : candidate.skill_profile;
+          currentSkills = (parsed || []).filter((s) => s.skill);
+        }
+      } catch (_) {}
+      setEditableSkills(currentSkills.length > 0 ? currentSkills : [{ skill: "", rating: 0 }]);
+    }
+  }, [editing, candidate.skill_profile]);
+
+  const handleAddSkill = () => setEditableSkills([...editableSkills, { skill: "", rating: 0 }]);
+  const handleRemoveSkill = (idx) => {
+    const newSkills = [...editableSkills];
+    newSkills.splice(idx, 1);
+    setEditableSkills(newSkills);
+  };
+  const setSkillValue = (idx, skill) => {
+    const newSkills = [...editableSkills];
+    newSkills[idx].skill = skill;
+    setEditableSkills(newSkills);
+  };
+  const setRatingValue = (idx, rating) => {
+    const newSkills = [...editableSkills];
+    newSkills[idx].rating = rating;
+    setEditableSkills(newSkills);
+  };
+  const setDomainValue = (idx, domain) => {
+    const newSkills = [...editableSkills];
+    newSkills[idx].domain = domain;
+    setEditableSkills(newSkills);
+  };
 
   let skills = [];
   try {
@@ -648,9 +686,24 @@ function ProfileCard({ candidate, onSave, onDelete }) {
   async function handleSave() {
     setSaving(true);
     const table = candidate.is_registry ? "member_registry" : "profiles";
-    const { error } = await supabase.from(table).update({ full_name: name.trim(), usn: usn.trim() }).eq(candidate.is_registry ? "email" : "id", candidate.is_registry ? candidate.email : candidate.id);
+    const cleanSkills = editableSkills.filter(s => s.skill && s.rating > 0);
+    
+    const { error } = await supabase.from(table).update({ 
+      full_name: name.trim(), 
+      usn: usn.trim(),
+      skill_profile: cleanSkills 
+    }).eq(candidate.is_registry ? "email" : "id", candidate.is_registry ? candidate.email : candidate.id);
+    
     if (error) { showToast("Failed to save changes.", "error"); }
-    else { showToast("Profile updated!", "success"); onSave(candidate.id || candidate.email, { full_name: name.trim(), usn: usn.trim() }); setEditing(false); }
+    else { 
+      showToast("Profile updated!", "success"); 
+      onSave(candidate.id || candidate.email, { 
+        full_name: name.trim(), 
+        usn: usn.trim(),
+        skill_profile: cleanSkills
+      }); 
+      setEditing(false); 
+    }
     setSaving(false);
   }
 
@@ -724,7 +777,7 @@ function ProfileCard({ candidate, onSave, onDelete }) {
             onClick={() => setRadarOpen(true)}
             className="bg-[#F8FAFC] rounded-[24px] p-6 flex justify-center border border-slate-50 cursor-pointer hover:bg-[#F1F5F9] hover:border-blue-100 transition-all group relative"
           >
-            <RadarChart skills={skills} size={200} showLabels={true} />
+            <RadarChart skills={editing ? editableSkills : skills} size={200} showLabels={true} />
             <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-lg p-1.5 shadow-sm border border-[#E2E8F0]">
               <Maximize2 size={12} className="text-[#94A3B8]" />
             </div>
@@ -736,12 +789,21 @@ function ProfileCard({ candidate, onSave, onDelete }) {
               <p className="text-[8px] font-black text-[#94A3B8] uppercase tracking-widest">Avg Score</p>
               <div className="flex items-center gap-2">
                 <Star size={14} className="fill-amber-400 text-amber-400" />
-                <span className="text-sm font-black text-[#0F172A]">{avgRating || "0.0"}</span>
+                <span className="text-sm font-black text-[#0F172A]">
+                  {editing 
+                    ? (editableSkills.filter(s => s.skill && s.rating > 0).length > 0 
+                        ? (editableSkills.reduce((a, b) => a + b.rating, 0) / editableSkills.filter(s => s.skill && s.rating > 0).length).toFixed(1) 
+                        : "0.0")
+                    : (avgRating || "0.0")
+                  }
+                </span>
               </div>
             </div>
             <div className="space-y-1">
               <p className="text-[8px] font-black text-[#94A3B8] uppercase tracking-widest">Skills</p>
-              <span className="text-sm font-black text-[#2563EB]">{skills.length}</span>
+              <span className="text-sm font-black text-[#2563EB]">
+                {editing ? editableSkills.filter(s => s.skill).length : skills.length}
+              </span>
             </div>
           </div>
         </div>
@@ -753,17 +815,49 @@ function ProfileCard({ candidate, onSave, onDelete }) {
             {expanded ? <ChevronUp size={14} className="text-[#94A3B8]" /> : <ChevronDown size={14} className="text-[#94A3B8]" />}
           </button>
           <AnimatePresence>
-            {expanded && (
+            {(expanded || editing) && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="space-y-2 mt-4 overflow-hidden">
-                {skills.map((s) => (
-                  <div key={s.skill} className="flex items-center justify-between py-1.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[12px] font-bold text-[#0F172A] truncate">{s.skill}</span>
-                      <span className="text-[7px] font-black text-[#94A3B8] uppercase tracking-widest bg-[#F8FAFC] px-1.5 py-0.5 rounded border border-[#F1F5F9] flex-shrink-0">{findDomain(s)}</span>
+                {editing ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest">Editing Competencies</span>
+                      <button onClick={handleAddSkill} className="p-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all">
+                        <Plus size={12} />
+                      </button>
                     </div>
-                    <StarBadge rating={s.rating} />
+                    <div className="space-y-3">
+                      {editableSkills.map((slot, idx) => (
+                        <div key={idx} className="grid items-center gap-2 py-1" style={{ gridTemplateColumns: "1fr auto auto" }}>
+                          <SkillDropdown 
+                            value={slot.skill} 
+                            onChange={(s) => setSkillValue(idx, s)} 
+                            usedSkills={editableSkills.map(x => x.skill).filter(Boolean)} 
+                            domain={slot.domain}
+                            onDomainChange={(d) => setDomainValue(idx, d)}
+                          />
+                          <StarRating 
+                            rating={slot.rating} 
+                            onRate={(r) => setRatingValue(idx, r)} 
+                            disabled={!slot.skill} 
+                          />
+                          <button onClick={() => handleRemoveSkill(idx)} className="p-1 text-slate-300 hover:text-rose-500 transition-colors">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                ) : (
+                  skills.map((s) => (
+                    <div key={s.skill} className="flex items-center justify-between py-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-[12px] font-bold text-[#0F172A] truncate">{s.skill}</span>
+                        <span className="text-[7px] font-black text-[#94A3B8] uppercase tracking-widest bg-[#F8FAFC] px-1.5 py-0.5 rounded border border-[#F1F5F9] flex-shrink-0">{findDomain(s)}</span>
+                      </div>
+                      <StarBadge rating={s.rating} />
+                    </div>
+                  ))
+                )}
               </motion.div>
             )}
           </AnimatePresence>
