@@ -469,6 +469,7 @@ function AddMemberModal({ isOpen, onClose, onAdd }) {
       setLoading(false);
     } else {
       onAdd(insertedData);
+      alert(`Member added! \n\nIdentity: ${email} \nPassword: ${email} \n\nThey can now login directly.`);
       onClose();
     }
   };
