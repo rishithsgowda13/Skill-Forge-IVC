@@ -452,7 +452,7 @@ function AddMemberModal({ isOpen, onClose, onAdd }) {
 
     const cleanSkills = skills.filter(s => s.skill && s.rating > 0);
     
-    const { error: insertError } = await supabase
+    const { data: insertedData, error: insertError } = await supabase
       .from('member_registry')
       .insert([{
         full_name: name.trim(),
@@ -460,13 +460,15 @@ function AddMemberModal({ isOpen, onClose, onAdd }) {
         usn: usn.trim().toUpperCase(),
         skill_profile: cleanSkills,
         created_at: new Date().toISOString()
-      }]);
+      }])
+      .select()
+      .single();
 
     if (insertError) {
       setError(insertError.message);
       setLoading(false);
     } else {
-      onAdd({ full_name: name, email, usn, skill_profile: cleanSkills });
+      onAdd(insertedData);
       onClose();
     }
   };
@@ -864,7 +866,12 @@ export default function AdminProfilesPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
           {filtered.map((c) => (
-            <ProfileCard key={c.id} candidate={c} onSave={(id, upd) => setCandidates(p => p.map(x => x.id === id ? {...x, ...upd} : x))} onDelete={(id) => setCandidates(p => p.filter(x => x.id !== id))} />
+            <ProfileCard 
+              key={c.id || c.email} 
+              candidate={c} 
+              onSave={(id, upd) => setCandidates(p => p.map(x => (x.id === id || x.email === id) ? {...x, ...upd} : x))} 
+              onDelete={(id) => setCandidates(p => p.filter(x => (x.id !== id && x.email !== id)))} 
+            />
           ))}
         </div>
       )}
@@ -872,7 +879,7 @@ export default function AdminProfilesPage() {
       <AddMemberModal 
         isOpen={addModalOpen} 
         onClose={() => setAddModalOpen(false)} 
-        onAdd={(newMember) => setCandidates(prev => [newMember, ...prev])} 
+        onAdd={(newMember) => setCandidates(prev => [{ ...newMember, is_registry: true }, ...prev])} 
       />
     </div>
   );
