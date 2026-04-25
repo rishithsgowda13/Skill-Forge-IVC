@@ -105,13 +105,34 @@ export default function LoginPage() {
         setLoading(false); 
       }
       else if (authData.user) { 
-        await supabase.from('profiles').insert([{
-          id: authData.user.id,
-          full_name: fullName,
-          email: email,
-          role: 'candidate',
-          created_at: new Date().toISOString()
-        }]);
+        // Check if a profile with this email already exists (pre-created by admin)
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', email)
+          .single();
+
+        if (existingProfile) {
+          // Claim the existing profile
+          await supabase
+            .from('profiles')
+            .update({
+              id: authData.user.id,
+              full_name: fullName,
+              role: 'candidate', // Ensure they have the correct role
+              created_at: new Date().toISOString()
+            })
+            .eq('email', email);
+        } else {
+          // Create a new profile
+          await supabase.from('profiles').insert([{
+            id: authData.user.id,
+            full_name: fullName,
+            email: email,
+            role: 'candidate',
+            created_at: new Date().toISOString()
+          }]);
+        }
 
         setSuccessMessage("Sync Complete: Node established."); 
         setLoading(false); 

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { createPortal } from "react-dom";
 import {
   Search,
   Pencil,
@@ -22,6 +23,10 @@ import {
   Trash2,
   Zap,
   Maximize2,
+  Plus,
+  Tag,
+  Save,
+  Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -36,7 +41,20 @@ const SKILL_CATEGORIES = {
   "Specialized": ["Cybersecurity", "Blockchain", "IoT", "Embedded Systems", "Mobile Development", "Game Development", "AR/VR", "Robotics", "3D Modeling", "Digital Marketing", "SEO", "Content Writing", "Project Management", "Business Analysis", "Financial Analysis"]
 };
 
-const SECTORS = Object.keys(SKILL_CATEGORIES);
+const SKILL_OPTIONS = Object.values(SKILL_CATEGORIES).flat();
+const DOMAIN_NAMES = Object.keys(SKILL_CATEGORIES);
+const SECTORS = DOMAIN_NAMES;
+
+// Domain color map
+const DOMAIN_COLORS = {
+  "Programming": "bg-blue-50 text-blue-600 border-blue-200",
+  "Web Tech": "bg-cyan-50 text-cyan-600 border-cyan-200",
+  "Data & AI": "bg-purple-50 text-purple-600 border-purple-200",
+  "Cloud & DevOps": "bg-orange-50 text-orange-600 border-orange-200",
+  "Design & Product": "bg-pink-50 text-pink-600 border-pink-200",
+  "Soft Skills": "bg-emerald-50 text-emerald-600 border-emerald-200",
+  "Specialized": "bg-amber-50 text-amber-600 border-amber-200",
+};
 
 // Find domain for a skill — checks custom domain field first, then default mapping
 function findDomain(skillObj) {
@@ -45,6 +63,213 @@ function findDomain(skillObj) {
     if (skills.includes(skillObj.skill)) return cat;
   }
   return "Specialized"; // fallback
+}
+
+// ─── Star rating ──────────────────────────────────────────────────────────────
+function StarRating({ rating, onRate, disabled = false }) {
+  const [hovered, setHovered] = useState(0);
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => !disabled && onRate(star)}
+          onMouseEnter={() => !disabled && setHovered(star)}
+          onMouseLeave={() => setHovered(0)}
+          disabled={disabled}
+          className={`transition-all duration-150 ${
+            disabled ? "cursor-default opacity-40" : "cursor-pointer hover:scale-125 active:scale-90"
+          }`}
+        >
+          <Star
+            size={16}
+            className={`transition-colors ${
+              star <= (hovered || rating)
+                ? "text-amber-400 fill-amber-400"
+                : "text-slate-200"
+            }`}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Portal dropdown with custom skill + domain mapping ─────────────────────
+function SkillDropdown({ value, onChange, usedSkills, domain, onDomainChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
+  const [showDomainPicker, setShowDomainPicker] = useState(false);
+  const triggerRef = useRef(null);
+
+  const available = SKILL_OPTIONS.filter(
+    (s) => (!usedSkills.includes(s) || s === value) &&
+            s.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const isCustom = search.trim().length > 0 && available.length === 0;
+
+  const open = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const dropH = 300;
+    const openUp = spaceBelow < dropH && rect.top > dropH;
+    setDropPos({
+      top: openUp ? rect.top - dropH - 4 : rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+      openUp,
+    });
+    setIsOpen(true);
+  }, [available.length]);
+
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setSearch("");
+    setShowDomainPicker(false);
+  }, []);
+
+  const toggle = () => (isOpen ? close() : open());
+
+  const handleCustomSkill = (selectedDomain) => {
+    const customName = search.trim();
+    onChange(customName);
+    onDomainChange(selectedDomain);
+    close();
+  };
+
+  // Find domain for current value
+  const currentDomain = domain || DOMAIN_NAMES.find(d => SKILL_CATEGORIES[d].includes(value)) || null;
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={toggle}
+        className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl border-2 transition-all text-left ${
+          isOpen
+            ? "border-violet-400 bg-violet-50/40 shadow-sm"
+            : value
+            ? "border-[#E2E8F0] bg-white hover:border-violet-200"
+            : "border-dashed border-[#E2E8F0] bg-[#F8FAFC] hover:border-violet-300"
+        }`}
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className={`text-xs font-semibold truncate ${value ? "text-[#0F172A]" : "text-[#94A3B8]"}`}>
+            {value || "Select a skill…"}
+          </span>
+          {value && currentDomain && (
+            <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border flex-shrink-0 ${DOMAIN_COLORS[currentDomain] || "bg-slate-50 text-slate-500 border-slate-200"}`}>
+              {currentDomain}
+            </span>
+          )}
+        </div>
+        <ChevronDown
+          size={13}
+          className={`text-[#94A3B8] transition-transform flex-shrink-0 ml-2 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {isOpen &&
+        createPortal(
+          <>
+            <div className="fixed inset-0 z-[9998]" onClick={close} />
+            <div
+              style={{
+                position: "fixed",
+                top: dropPos.top,
+                left: dropPos.left,
+                width: dropPos.width,
+                zIndex: 9999,
+              }}
+              className="bg-white border-2 border-[#E2E8F0] rounded-2xl shadow-2xl overflow-hidden"
+            >
+              {/* Search */}
+              <div className="p-2.5 border-b border-[#F1F5F9]">
+                <div className="flex items-center gap-2 bg-[#F8FAFC] rounded-xl px-3 py-1.5 border border-[#F1F5F9]">
+                  <Search size={12} className="text-[#94A3B8] flex-shrink-0" />
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Search or type a custom skill…"
+                    value={search}
+                    onChange={(e) => { setSearch(e.target.value); setShowDomainPicker(false); }}
+                    className="bg-transparent text-xs font-semibold w-full outline-none placeholder:text-[#CBD5E1]"
+                  />
+                </div>
+              </div>
+
+              <div className="max-h-60 overflow-y-auto">
+                {/* Existing skills */}
+                {available.map((skill) => (
+                  <button
+                    key={skill}
+                    type="button"
+                    onClick={() => { onChange(skill); onDomainChange(null); close(); }}
+                    className={`w-full text-left px-4 py-2 text-xs font-semibold transition-colors hover:bg-violet-50 hover:text-violet-700 flex items-center justify-between ${
+                      skill === value ? "bg-violet-50 text-violet-700" : "text-[#64748B]"
+                    }`}
+                  >
+                    <span>{skill}</span>
+                    <span className="text-[7px] font-black text-[#CBD5E1] uppercase">
+                      {DOMAIN_NAMES.find(d => SKILL_CATEGORIES[d].includes(skill))}
+                    </span>
+                  </button>
+                ))}
+
+                {/* Custom skill option */}
+                {isCustom && !showDomainPicker && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDomainPicker(true)}
+                    className="w-full text-left px-4 py-3 text-xs font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 transition-colors flex items-center gap-2 border-t border-[#F1F5F9]"
+                  >
+                    <Plus size={12} />
+                    Add "<span className="font-black">{search.trim()}</span>" as custom skill →
+                  </button>
+                )}
+
+                {/* Domain picker for custom skill */}
+                {isCustom && showDomainPicker && (
+                  <div className="border-t border-[#F1F5F9] p-3 space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Tag size={11} className="text-violet-500" />
+                      <p className="text-[9px] font-black text-[#0F172A] uppercase tracking-widest">
+                        Map "<span className="text-violet-600">{search.trim()}</span>" to a domain:
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {DOMAIN_NAMES.map((d) => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => handleCustomSkill(d)}
+                          className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all hover:scale-[1.02] active:scale-95 ${DOMAIN_COLORS[d]}`}
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No results fallback */}
+                {available.length === 0 && !isCustom && (
+                  <div className="py-5 text-center text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
+                    No match
+                  </div>
+                )}
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
+    </>
+  );
 }
 
 // ─── Radar Chart Component (reusable at any size) ───────────────────────────
@@ -182,6 +407,194 @@ function RadarModal({ skills, name, onClose }) {
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+// ─── Add Member Modal ────────────────────────────────────────────────────────
+function AddMemberModal({ isOpen, onClose, onAdd }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [usn, setUsn] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [skills, setSkills] = useState([{ skill: "", rating: 0 }]);
+  const [error, setError] = useState(null);
+  const supabase = createClient();
+
+  const handleAddSkill = () => setSkills([...skills, { skill: "", rating: 0 }]);
+  const handleRemoveSkill = (idx) => {
+    const newSkills = [...skills];
+    newSkills.splice(idx, 1);
+    setSkills(newSkills);
+  };
+  const setSkill = (idx, skill) => {
+    const newSkills = [...skills];
+    newSkills[idx].skill = skill;
+    setSkills(newSkills);
+  };
+  const setRating = (idx, rating) => {
+    const newSkills = [...skills];
+    newSkills[idx].rating = rating;
+    setSkills(newSkills);
+  };
+  const setDomain = (idx, domain) => {
+    const newSkills = [...skills];
+    newSkills[idx].domain = domain;
+    setSkills(newSkills);
+  };
+
+  const handleSave = async () => {
+    if (!name || !email || !usn) {
+      setError("Please fill in all identity fields.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    const cleanSkills = skills.filter(s => s.skill && s.rating > 0);
+    
+    // Generate a temporary ID (UUID format)
+    const tempId = crypto.randomUUID();
+
+    const { error: insertError } = await supabase
+      .from('profiles')
+      .insert([{
+        id: tempId,
+        full_name: name.trim(),
+        email: email.trim().toLowerCase(),
+        usn: usn.trim().toUpperCase(),
+        role: 'candidate',
+        skill_profile: JSON.stringify(cleanSkills),
+        created_at: new Date().toISOString()
+      }]);
+
+    if (insertError) {
+      setError(insertError.message);
+      setLoading(false);
+    } else {
+      onAdd({ id: tempId, full_name: name, email, usn, skill_profile: cleanSkills });
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#0F172A]/40 backdrop-blur-sm p-6 overflow-y-auto">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar relative"
+      >
+        <div className="p-8 border-b border-[#F1F5F9] sticky top-0 bg-white z-10 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-black text-[#0F172A] uppercase tracking-tighter">Add Club Member</h2>
+            <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest mt-1">Manual node registration & profiling</p>
+          </div>
+          <button onClick={onClose} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all">
+            <X size={18} className="text-slate-400" />
+          </button>
+        </div>
+
+        <div className="p-8 space-y-8">
+          {/* Identity Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">Full Name</label>
+              <div className="relative group">
+                <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                <input 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Member Name"
+                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl py-2.5 pl-11 pr-4 text-xs font-bold text-[#0F172A] focus:outline-none focus:border-blue-500 transition-all"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">Email (Auth Link)</label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                <input 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="member@email.com"
+                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl py-2.5 pl-11 pr-4 text-xs font-bold text-[#0F172A] focus:outline-none focus:border-blue-500 transition-all"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">USN / Roll Number</label>
+              <div className="relative group">
+                <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                <input 
+                  value={usn}
+                  onChange={(e) => setUsn(e.target.value)}
+                  placeholder="1DS21CS000"
+                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl py-2.5 pl-11 pr-4 text-xs font-bold text-[#0F172A] focus:outline-none focus:border-blue-500 transition-all uppercase"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Skill Profiling Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles size={14} className="text-violet-500" />
+                <span className="text-[10px] font-black text-[#0F172A] uppercase tracking-[0.2em]">Competency Assessment</span>
+              </div>
+              <button 
+                onClick={handleAddSkill}
+                className="flex items-center gap-1.5 text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline"
+              >
+                <Plus size={12} /> Add Skill
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {skills.map((slot, idx) => (
+                <div key={idx} className="grid items-center gap-3 py-1" style={{ gridTemplateColumns: "24px 1fr auto auto" }}>
+                  <div className="text-[10px] font-black text-slate-300">{idx + 1}</div>
+                  <SkillDropdown 
+                    value={slot.skill} 
+                    onChange={(s) => setSkill(idx, s)} 
+                    usedSkills={skills.map(x => x.skill).filter(Boolean)} 
+                    domain={slot.domain}
+                    onDomainChange={(d) => setDomain(idx, d)}
+                  />
+                  <StarRating 
+                    rating={slot.rating} 
+                    onRate={(r) => setRating(idx, r)} 
+                    disabled={!slot.skill} 
+                  />
+                  <button onClick={() => handleRemoveSkill(idx)} className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors">
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {error && <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center italic">{error}</p>}
+
+          <div className="pt-4 border-t border-[#F1F5F9]">
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className="w-full bg-[#0F172A] text-white py-3.5 rounded-2xl font-black text-[10px] tracking-[0.3em] uppercase hover:bg-slate-800 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-slate-200"
+            >
+              {loading ? <Loader2 className="animate-spin" size={16} /> : (
+                <>
+                  <Save size={14} />
+                  Establish Member Node
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>,
+    document.body
   );
 }
 
@@ -362,6 +775,7 @@ export default function AdminProfilesPage() {
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -406,9 +820,19 @@ export default function AdminProfilesPage() {
             Verified Competency Profiles & Sector Mapping
           </p>
         </div>
-        <div className="bg-white border border-[#E2E8F0] px-5 py-3 rounded-[24px] flex items-center gap-3 w-full lg:w-96 shadow-sm">
-          <Search size={18} className="text-[#94A3B8]" />
-          <input type="text" placeholder="Search vault by identity..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent border-none outline-none text-sm font-bold w-full placeholder:text-[#CBD5E1]" />
+        <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+          <div className="bg-white border border-[#E2E8F0] px-5 py-3 rounded-[24px] flex items-center gap-3 flex-1 lg:w-72 shadow-sm">
+            <Search size={18} className="text-[#94A3B8]" />
+            <input type="text" placeholder="Search vault..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent border-none outline-none text-sm font-bold w-full placeholder:text-[#CBD5E1]" />
+          </div>
+          
+          <button 
+            onClick={() => setAddModalOpen(true)}
+            className="flex items-center gap-2 bg-[#2563EB] text-white px-6 py-3.5 rounded-[24px] text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95 shadow-xl shadow-blue-100"
+          >
+            <Plus size={16} />
+            <span>Add Profile</span>
+          </button>
         </div>
       </header>
 
@@ -421,6 +845,7 @@ export default function AdminProfilesPage() {
         <div className="bg-white border border-dashed border-[#E2E8F0] rounded-[40px] p-24 text-center">
           <Users size={56} className="mx-auto text-[#CBD5E1] mb-6" />
           <p className="text-base font-bold text-[#64748B]">No verified profiles found in the vault.</p>
+          <button onClick={() => setAddModalOpen(true)} className="mt-4 text-blue-600 font-black text-[10px] uppercase tracking-widest hover:underline">Add your first member node →</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
@@ -429,6 +854,12 @@ export default function AdminProfilesPage() {
           ))}
         </div>
       )}
+
+      <AddMemberModal 
+        isOpen={addModalOpen} 
+        onClose={() => setAddModalOpen(false)} 
+        onAdd={(newMember) => setCandidates(prev => [newMember, ...prev])} 
+      />
     </div>
   );
 }
