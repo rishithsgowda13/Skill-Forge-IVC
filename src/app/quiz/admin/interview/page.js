@@ -17,24 +17,22 @@ import {
   Sparkles,
   Award,
   UserCheck,
+  Plus,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SKILL_OPTIONS = [
-  "JavaScript","TypeScript","Python","Java","C++","C#","Go","Rust","Ruby","PHP","Swift","Kotlin",
-  "React","Next.js","Vue.js","Angular","Node.js","Express.js","Django","Flask","Spring Boot",
-  "HTML/CSS","Tailwind CSS","GraphQL","REST APIs","WebSocket",
-  "Machine Learning","Deep Learning","Natural Language Processing","Computer Vision",
-  "Data Analysis","Data Engineering","TensorFlow","PyTorch","Pandas","NumPy",
-  "Power BI","Tableau","SQL","NoSQL",
-  "AWS","Azure","Google Cloud","Docker","Kubernetes","CI/CD","Terraform","Linux",
-  "UI/UX Design","Figma","Adobe XD","Product Management","Agile/Scrum",
-  "Communication","Leadership","Problem Solving","Critical Thinking","Team Collaboration",
-  "Time Management","Public Speaking","Negotiation","Adaptability","Creativity",
-  "Cybersecurity","Blockchain","IoT","Embedded Systems","Mobile Development",
-  "Game Development","AR/VR","Robotics","3D Modeling","Digital Marketing",
-  "SEO","Content Writing","Project Management","Business Analysis","Financial Analysis",
-];
+// Categorized skills list for sector mapping
+const SKILL_CATEGORIES = {
+  "Programming": ["JavaScript", "TypeScript", "Python", "Java", "C++", "C#", "Go", "Rust", "Ruby", "PHP", "Swift", "Kotlin"],
+  "Web Tech": ["React", "Next.js", "Vue.js", "Angular", "Node.js", "Express.js", "Django", "Flask", "Spring Boot", "HTML/CSS", "Tailwind CSS", "GraphQL", "REST APIs", "WebSocket"],
+  "Data & AI": ["Machine Learning", "Deep Learning", "Natural Language Processing", "Computer Vision", "Data Analysis", "Data Engineering", "TensorFlow", "PyTorch", "Pandas", "NumPy", "Power BI", "Tableau", "SQL", "NoSQL"],
+  "Cloud & DevOps": ["AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "CI/CD", "Terraform", "Linux"],
+  "Design & Product": ["UI/UX Design", "Figma", "Adobe XD", "Product Management", "Agile/Scrum"],
+  "Soft Skills": ["Communication", "Leadership", "Problem Solving", "Critical Thinking", "Team Collaboration", "Time Management", "Public Speaking", "Negotiation", "Adaptability", "Creativity"],
+  "Specialized": ["Cybersecurity", "Blockchain", "IoT", "Embedded Systems", "Mobile Development", "Game Development", "AR/VR", "Robotics", "3D Modeling", "Digital Marketing", "SEO", "Content Writing", "Project Management", "Business Analysis", "Financial Analysis"]
+};
+
+const SKILL_OPTIONS = Object.values(SKILL_CATEGORIES).flat();
 
 // ─── Star rating ──────────────────────────────────────────────────────────────
 function StarRating({ rating, onRate, disabled = false }) {
@@ -87,7 +85,6 @@ function SkillDropdown({ value, onChange, usedSkills }) {
   const open = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    // decide direction: open upward if less than 260px below viewport bottom
     const spaceBelow = window.innerHeight - rect.bottom;
     const dropH = Math.min(available.length * 38 + 60, 260);
     const openUp = spaceBelow < dropH && rect.top > dropH;
@@ -131,12 +128,9 @@ function SkillDropdown({ value, onChange, usedSkills }) {
       </button>
 
       {isOpen &&
-        typeof document !== "undefined" &&
         createPortal(
           <>
-            {/* backdrop */}
             <div className="fixed inset-0 z-[9998]" onClick={close} />
-            {/* dropdown */}
             <div
               style={{
                 position: "fixed",
@@ -147,7 +141,6 @@ function SkillDropdown({ value, onChange, usedSkills }) {
               }}
               className="bg-white border-2 border-[#E2E8F0] rounded-2xl shadow-2xl overflow-hidden"
             >
-              {/* search */}
               <div className="p-2.5 border-b border-[#F1F5F9]">
                 <div className="flex items-center gap-2 bg-[#F8FAFC] rounded-xl px-3 py-1.5 border border-[#F1F5F9]">
                   <Search size={12} className="text-[#94A3B8] flex-shrink-0" />
@@ -161,7 +154,6 @@ function SkillDropdown({ value, onChange, usedSkills }) {
                   />
                 </div>
               </div>
-              {/* list */}
               <div className="max-h-52 overflow-y-auto">
                 {available.length === 0 ? (
                   <div className="py-5 text-center text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
@@ -230,16 +222,17 @@ export default function InterviewPanelPage() {
     const init = {};
     list.forEach((c) => {
       try {
-        init[c.id] = c.skill_profile
+        const parsed = c.skill_profile
           ? (typeof c.skill_profile === "string" ? JSON.parse(c.skill_profile) : c.skill_profile)
           : empty();
+        init[c.id] = (Array.isArray(parsed) && parsed.length > 0) ? parsed : empty();
       } catch { init[c.id] = empty(); }
     });
     setSkillProfiles(init);
     setLoading(false);
   }
 
-  const empty = () => Array.from({ length: 5 }, () => ({ skill: "", rating: 0 }));
+  const empty = () => [{ skill: "", rating: 0 }, { skill: "", rating: 0 }, { skill: "", rating: 0 }];
 
   const setSkill = (uid, idx, skill) =>
     setSkillProfiles((p) => {
@@ -255,7 +248,18 @@ export default function InterviewPanelPage() {
       return { ...p, [uid]: arr };
     });
 
-  const clearSlot = (uid, idx) => { setSkill(uid, idx, ""); setRating(uid, idx, 0); };
+  const addSlot = (uid) =>
+    setSkillProfiles((p) => ({
+      ...p,
+      [uid]: [...(p[uid] || []), { skill: "", rating: 0 }]
+    }));
+
+  const removeSlot = (uid, idx) =>
+    setSkillProfiles((p) => {
+      const arr = [...(p[uid] || [])];
+      arr.splice(idx, 1);
+      return { ...p, [uid]: arr };
+    });
 
   const usedSkills = (uid) => (skillProfiles[uid] || []).map((s) => s.skill).filter(Boolean);
 
@@ -266,9 +270,10 @@ export default function InterviewPanelPage() {
 
   async function saveProfile(uid) {
     setSavingId(uid);
+    const cleanProfile = (skillProfiles[uid] || []).filter(s => s.skill);
     const { error } = await supabase
       .from("profiles")
-      .update({ skill_profile: JSON.stringify(skillProfiles[uid] || empty()) })
+      .update({ skill_profile: JSON.stringify(cleanProfile.length ? cleanProfile : []) })
       .eq("id", uid);
     showToast(error ? "Failed to save." : "Skill profile saved!", error ? "error" : "success");
     setSavingId(null);
@@ -287,7 +292,6 @@ export default function InterviewPanelPage() {
 
   return (
     <div className="p-8 md:p-14 space-y-10">
-      {/* Header */}
       <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
           <div className="flex items-center gap-2 mb-3">
@@ -299,7 +303,7 @@ export default function InterviewPanelPage() {
             Skill <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Profiling</span>
           </h1>
           <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.4em] mt-2">
-            Competency Assessment · 5 Skills · 5-Star Rating
+            Dynamic Assessment · Sector Mapping Enabled
           </p>
         </div>
         <div className="bg-white border border-[#E2E8F0] px-4 py-2 rounded-2xl flex items-center gap-2 w-full lg:w-72 shadow-sm">
@@ -314,23 +318,6 @@ export default function InterviewPanelPage() {
         </div>
       </header>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-5">
-        {[
-          { icon: UserCheck, label: "In Interview Pool", val: candidates.length, bg: "bg-violet-50", col: "text-violet-600" },
-          { icon: Star,      label: "Profiles Rated",   val: candidates.filter(c => (skillProfiles[c.id]||[]).some(s=>s.skill&&s.rating>0)).length, bg: "bg-amber-50", col: "text-amber-600" },
-          { icon: Award,     label: "Overall Avg",      val: candidates.length ? `${(candidates.reduce((a,c)=>a+parseFloat(avgRating(c.id)),0)/candidates.length).toFixed(1)}/5` : "—", bg: "bg-emerald-50", col: "text-emerald-600" },
-        ].map(({ icon: Icon, label, val, bg, col }) => (
-          <div key={label} className="bg-white border border-[#E2E8F0] p-5 rounded-[24px] shadow-sm flex items-center gap-4">
-            <div className={`w-10 h-10 ${bg} ${col} rounded-2xl flex items-center justify-center`}><Icon size={18} /></div>
-            <div>
-              <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest">{label}</p>
-              <p className={`text-xl font-black ${col}`}>{val}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* Candidate cards */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24 gap-4 opacity-20">
@@ -341,9 +328,6 @@ export default function InterviewPanelPage() {
         <div className="bg-white border border-dashed border-[#E2E8F0] rounded-[32px] p-20 text-center">
           <Users size={44} className="mx-auto text-[#CBD5E1] mb-4" />
           <p className="text-sm font-bold text-[#64748B]">No candidates selected for interview yet.</p>
-          <button onClick={() => router.push("/quiz/admin/round3")} className="mt-4 text-[10px] font-black text-violet-600 uppercase tracking-widest hover:underline">
-            Go to Selection Panel →
-          </button>
         </div>
       ) : (
         <div className="space-y-8">
@@ -360,7 +344,6 @@ export default function InterviewPanelPage() {
                 transition={{ delay: i * 0.04 }}
                 className="bg-white border-2 border-[#E2E8F0] rounded-[28px] shadow-sm"
               >
-                {/* Candidate header */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 border-b border-[#F1F5F9]">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-md shadow-violet-100">
@@ -379,7 +362,6 @@ export default function InterviewPanelPage() {
                     }`}>
                       <Star size={13} className={parseFloat(avg) > 0 ? "fill-current" : ""} />
                       <span>{avg}</span>
-                      <span className="text-[8px] font-black opacity-50 uppercase">avg</span>
                     </div>
                     <button
                       onClick={() => saveProfile(candidate.id)}
@@ -392,60 +374,53 @@ export default function InterviewPanelPage() {
                   </div>
                 </div>
 
-                {/* Skills grid */}
                 <div className="p-6 space-y-3">
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Sparkles size={14} className="text-violet-500" />
-                      <span className="text-[10px] font-black text-[#0F172A] uppercase tracking-[0.2em]">Skill Assessment</span>
+                      <span className="text-[10px] font-black text-[#0F172A] uppercase tracking-[0.2em]">Competency Matrix</span>
                     </div>
-                    <span className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest">{used.length}/5 filled</span>
+                    <span className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest">{used.length} Skills Profiled</span>
                   </div>
 
-                  {profile.map((slot, idx) => (
-                    <div
-                      key={idx}
-                      className="grid items-center gap-3 py-2"
-                      style={{ gridTemplateColumns: "28px 1fr auto auto" }}
-                    >
-                      {/* Index badge */}
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black ${
-                        slot.skill && slot.rating > 0
-                          ? "bg-violet-100 text-violet-700"
-                          : "bg-slate-100 text-slate-400"
-                      }`}>
-                        {idx + 1}
-                      </div>
-
-                      {/* Dropdown */}
-                      <SkillDropdown
-                        value={slot.skill}
-                        onChange={(skill) => setSkill(candidate.id, idx, skill)}
-                        usedSkills={used}
-                      />
-
-                      {/* Stars */}
-                      <StarRating
-                        rating={slot.rating}
-                        onRate={(r) => setRating(candidate.id, idx, r)}
-                        disabled={!slot.skill}
-                      />
-
-                      {/* Clear */}
-                      <button
-                        type="button"
-                        onClick={() => clearSlot(candidate.id, idx)}
-                        className={`p-1.5 rounded-lg transition-all ${
-                          slot.skill
-                            ? "text-slate-300 hover:text-rose-500 hover:bg-rose-50"
-                            : "text-slate-200 cursor-default"
-                        }`}
-                        disabled={!slot.skill}
+                  <div className="grid grid-cols-1 gap-2">
+                    {profile.map((slot, idx) => (
+                      <div
+                        key={idx}
+                        className="grid items-center gap-3 py-2"
+                        style={{ gridTemplateColumns: "28px 1fr auto auto" }}
                       >
-                        <X size={13} />
-                      </button>
-                    </div>
-                  ))}
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black ${slot.skill ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-400"}`}>
+                          {idx + 1}
+                        </div>
+                        <SkillDropdown
+                          value={slot.skill}
+                          onChange={(skill) => setSkill(candidate.id, idx, skill)}
+                          usedSkills={used}
+                        />
+                        <StarRating
+                          rating={slot.rating}
+                          onRate={(r) => setRating(candidate.id, idx, r)}
+                          disabled={!slot.skill}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeSlot(candidate.id, idx)}
+                          className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => addSlot(candidate.id)}
+                    className="w-full mt-4 py-3 rounded-xl border-2 border-dashed border-[#E2E8F0] text-[9px] font-black text-[#94A3B8] uppercase tracking-[0.3em] hover:border-violet-300 hover:text-violet-600 hover:bg-violet-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Plus size={12} />
+                    Add Skill Assessment Slot
+                  </button>
                 </div>
               </motion.div>
             );
