@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, MessageSquare, ShieldCheck, User } from "lucide-react";
+import { Send, MessageSquare, ShieldCheck, User, Globe } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
 export default function ProjectChat({ projectId, userEmail, userName, isMentor = false }) {
