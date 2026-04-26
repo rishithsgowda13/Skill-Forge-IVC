@@ -29,6 +29,8 @@ import {
   Sparkles,
   TrendingUp,
   Activity,
+  Briefcase,
+  Trophy
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -139,7 +141,7 @@ function SkillDropdown({ value, onChange, usedSkills, domain, onDomainChange }) 
   const handleCustomSkill = (selectedDomain) => {
     const customName = search.trim();
     onChange(customName);
-    onDomainChange(selectedDomain);
+    onDomainChange?.(selectedDomain);
     close();
   };
 
@@ -190,7 +192,6 @@ function SkillDropdown({ value, onChange, usedSkills, domain, onDomainChange }) 
               }}
               className="bg-white border-2 border-[#E2E8F0] rounded-2xl shadow-2xl overflow-hidden"
             >
-              {/* Search */}
               <div className="p-2.5 border-b border-[#F1F5F9]">
                 <div className="flex items-center gap-2 bg-[#F8FAFC] rounded-xl px-3 py-1.5 border border-[#F1F5F9]">
                   <Search size={12} className="text-[#94A3B8] flex-shrink-0" />
@@ -211,7 +212,7 @@ function SkillDropdown({ value, onChange, usedSkills, domain, onDomainChange }) 
                   <button
                     key={skill}
                     type="button"
-                    onClick={() => { onChange(skill); onDomainChange(null); close(); }}
+                    onClick={() => { onChange(skill); onDomainChange?.(null); close(); }}
                     className={`w-full text-left px-4 py-2 text-xs font-semibold transition-colors hover:bg-violet-50 hover:text-violet-700 flex items-center justify-between ${
                       skill === value ? "bg-violet-50 text-violet-700" : "text-[#64748B]"
                     }`}
@@ -490,203 +491,7 @@ function RadarModal({ skills, name, onClose }) {
   );
 }
 
-// ─── Add Member Modal ────────────────────────────────────────────────────────
-function AddMemberModal({ isOpen, onClose, onAdd }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [usn, setUsn] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [skills, setSkills] = useState([{ skill: "", rating: 0 }]);
-  const [error, setError] = useState(null);
-  const supabase = createClient();
 
-  // Reset state when modal opens to avoid showing old data
-  useEffect(() => {
-    if (isOpen) {
-      setName("");
-      setEmail("");
-      setUsn("");
-      setSkills([{ skill: "", rating: 0 }]);
-      setError(null);
-      setLoading(false);
-    }
-  }, [isOpen]);
-
-  const handleAddSkill = () => setSkills([...skills, { skill: "", rating: 0 }]);
-  const handleRemoveSkill = (idx) => {
-    const newSkills = [...skills];
-    newSkills.splice(idx, 1);
-    setSkills(newSkills);
-  };
-  const setSkill = (idx, skill) => {
-    const newSkills = [...skills];
-    newSkills[idx].skill = skill;
-    setSkills(newSkills);
-  };
-  const setRating = (idx, rating) => {
-    const newSkills = [...skills];
-    newSkills[idx].rating = rating;
-    setSkills(newSkills);
-  };
-  const setDomain = (idx, domain) => {
-    const newSkills = [...skills];
-    newSkills[idx].domain = domain;
-    setSkills(newSkills);
-  };
-
-  const handleSave = async () => {
-    if (!name || !email || !usn) {
-      setError("Please fill in all identity fields.");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-
-    const cleanSkills = skills.filter(s => s.skill && s.rating > 0);
-    
-    const { data: insertedData, error: insertError } = await supabase
-      .from('member_registry')
-      .insert([{
-        full_name: name.trim(),
-        email: email.trim().toLowerCase(),
-        usn: usn.trim().toUpperCase(),
-        skill_profile: cleanSkills,
-        created_at: new Date().toISOString()
-      }])
-      .select()
-      .single();
-
-    if (insertError) {
-      setError(insertError.message);
-      setLoading(false);
-    } else {
-      onAdd(insertedData);
-      alert(`Member added! \n\nIdentity: ${email} \nPassword: ${email} \n\nThey can now login directly.`);
-      onClose();
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return createPortal(
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#0F172A]/40 backdrop-blur-sm p-6 overflow-y-auto">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar relative"
-      >
-        <div className="p-8 border-b border-[#F1F5F9] sticky top-0 bg-white z-10 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-black text-[#0F172A] uppercase tracking-tighter">Add Club Member</h2>
-            <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest mt-1">Manual node registration & profiling</p>
-          </div>
-          <button onClick={onClose} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all">
-            <X size={18} className="text-slate-400" />
-          </button>
-        </div>
-
-        <div className="p-8 space-y-8">
-          {/* Identity Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">Full Name</label>
-              <div className="relative group">
-                <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
-                <input 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Member Name"
-                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl py-2.5 pl-11 pr-4 text-xs font-bold text-[#0F172A] focus:outline-none focus:border-blue-500 transition-all"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">Email (Auth Link)</label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
-                <input 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="member@email.com"
-                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl py-2.5 pl-11 pr-4 text-xs font-bold text-[#0F172A] focus:outline-none focus:border-blue-500 transition-all"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">USN / Roll Number</label>
-              <div className="relative group">
-                <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
-                <input 
-                  value={usn}
-                  onChange={(e) => setUsn(e.target.value)}
-                  placeholder="1DS21CS000"
-                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl py-2.5 pl-11 pr-4 text-xs font-bold text-[#0F172A] focus:outline-none focus:border-blue-500 transition-all uppercase"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Skill Profiling Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles size={14} className="text-violet-500" />
-                <span className="text-[10px] font-black text-[#0F172A] uppercase tracking-[0.2em]">Competency Assessment</span>
-              </div>
-              <button 
-                onClick={handleAddSkill}
-                className="flex items-center gap-1.5 text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline"
-              >
-                <Plus size={12} /> Add Skill
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {skills.map((slot, idx) => (
-                <div key={idx} className="grid items-center gap-3 py-1" style={{ gridTemplateColumns: "24px 1fr auto auto" }}>
-                  <div className="text-[10px] font-black text-slate-300">{idx + 1}</div>
-                  <SkillDropdown 
-                    value={slot.skill} 
-                    onChange={(s) => setSkill(idx, s)} 
-                    usedSkills={skills.map(x => x.skill).filter(Boolean)} 
-                    domain={slot.domain}
-                    onDomainChange={(d) => setDomain(idx, d)}
-                  />
-                  <StarRating 
-                    rating={slot.rating} 
-                    onRate={(r) => setRating(idx, r)} 
-                    disabled={!slot.skill} 
-                  />
-                  <button onClick={() => handleRemoveSkill(idx)} className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors">
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {error && <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center italic">{error}</p>}
-
-          <div className="pt-4 border-t border-[#F1F5F9]">
-            <button
-              onClick={handleSave}
-              disabled={loading}
-              className="w-full bg-[#0F172A] text-white py-3.5 rounded-2xl font-black text-[10px] tracking-[0.3em] uppercase hover:bg-slate-800 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-slate-200"
-            >
-              {loading ? <Loader2 className="animate-spin" size={16} /> : (
-                <>
-                  <Save size={14} />
-                  Establish Member Node
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </motion.div>
-    </div>,
-    document.body
-  );
-}
 
 // ─── Star display (read-only) ────────────────────────────────────────────────
 function StarBadge({ rating }) {
@@ -710,6 +515,10 @@ function ProfileCard({ candidate, onSave, onDelete }) {
   const [radarOpen, setRadarOpen] = useState(false);
   const [name, setName] = useState(candidate.full_name || "");
   const [usn, setUsn] = useState(candidate.usn || "");
+  const [email, setEmail] = useState(candidate.email || "");
+  const [phone, setPhone] = useState(candidate.phone || "");
+  const [section, setSection] = useState(candidate.section || "");
+  const [semester, setSemester] = useState(candidate.semester || "");
   const [editableSkills, setEditableSkills] = useState([]);
   const [toast, setToast] = useState(null);
   const supabase = createClient();
@@ -760,8 +569,16 @@ function ProfileCard({ candidate, onSave, onDelete }) {
     }
   } catch (_) {}
 
-  const avgRating = skills.length > 0
-      ? (skills.reduce((s, k) => s + k.rating, 0) / skills.length).toFixed(1) : null;
+  const forgeScore = skills.reduce((s, k) => s + k.rating, 0) * 10;
+  
+  const getMasteryRank = (score) => {
+    if (score >= 600) return { label: "Master", color: "text-rose-600", bg: "bg-rose-50" };
+    if (score >= 300) return { label: "Expert", color: "text-violet-600", bg: "bg-violet-50" };
+    if (score >= 100) return { label: "Specialist", color: "text-blue-600", bg: "bg-blue-50" };
+    return { label: "Apprentice", color: "text-slate-500", bg: "bg-slate-50" };
+  };
+
+  const rank = getMasteryRank(forgeScore);
 
   async function handleSave() {
     setSaving(true);
@@ -771,6 +588,10 @@ function ProfileCard({ candidate, onSave, onDelete }) {
     const { error } = await supabase.from(table).update({ 
       full_name: name.trim(), 
       usn: usn.trim(),
+      email: email.trim().toLowerCase(),
+      // phone: phone.trim(), // Omitted due to schema mismatch
+      // section: section.trim(), // Omitted due to schema mismatch
+      // semester: semester.trim(), // Omitted due to schema mismatch
       skill_profile: cleanSkills 
     }).eq(candidate.is_registry ? "email" : "id", candidate.is_registry ? candidate.email : candidate.id);
     
@@ -780,6 +601,10 @@ function ProfileCard({ candidate, onSave, onDelete }) {
       onSave(candidate.id || candidate.email, { 
         full_name: name.trim(), 
         usn: usn.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        section: section.trim(),
+        semester: semester.trim(),
         skill_profile: cleanSkills
       }); 
       setEditing(false); 
@@ -830,9 +655,19 @@ function ProfileCard({ candidate, onSave, onDelete }) {
               {editing ? (
                 <div className="space-y-1.5">
                   <input value={name} onChange={(e) => setName(e.target.value)} className="w-full text-sm font-black text-[#0F172A] border-b-2 border-blue-500 bg-transparent outline-none pb-0.5" placeholder="Full name" autoFocus />
-                  <div className="flex items-center gap-1.5">
-                    <Hash size={10} className="text-[#94A3B8] flex-shrink-0" />
-                    <input value={usn} onChange={(e) => setUsn(e.target.value)} className="w-full text-[10px] font-black text-[#64748B] uppercase border-b border-slate-200 bg-transparent outline-none pb-0.5" placeholder="USN" />
+                  <div className="grid grid-cols-1 gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <Hash size={10} className="text-[#94A3B8] flex-shrink-0" />
+                      <input value={usn} onChange={(e) => setUsn(e.target.value)} className="w-full text-[9px] font-black text-[#64748B] uppercase border-b border-slate-200 bg-transparent outline-none pb-0.5" placeholder="USN" />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Mail size={10} className="text-[#94A3B8] flex-shrink-0" />
+                      <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full text-[9px] font-black text-[#64748B] border-b border-slate-200 bg-transparent outline-none pb-0.5" placeholder="Email" />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Phone size={10} className="text-[#94A3B8] flex-shrink-0" />
+                      <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full text-[9px] font-black text-[#64748B] border-b border-slate-200 bg-transparent outline-none pb-0.5" placeholder="Phone" />
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -846,7 +681,7 @@ function ProfileCard({ candidate, onSave, onDelete }) {
               {editing ? (
                 <>
                   <button onClick={handleSave} disabled={saving} className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">{saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}</button>
-                  <button onClick={() => { setName(candidate.full_name || ""); setUsn(candidate.usn || ""); setEditing(false); }} className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-slate-100 transition-all"><X size={13} /></button>
+                  <button onClick={() => { setName(candidate.full_name || ""); setUsn(candidate.usn || ""); setEmail(candidate.email || ""); setPhone(candidate.phone || ""); setEditing(false); }} className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-slate-100 transition-all"><X size={13} /></button>
                 </>
               ) : (
                 <>
@@ -873,16 +708,20 @@ function ProfileCard({ candidate, onSave, onDelete }) {
           {/* Stats Row */}
           <div className="flex items-center gap-4 py-3 border-t border-[#F8FAFC]">
             <div className="flex items-center gap-1.5">
-              <Star size={12} className="fill-amber-400 text-amber-400" />
+              <Zap size={12} className="text-amber-500 fill-amber-500" />
               <span className="text-sm font-black text-[#0F172A]">
                 {editing 
-                  ? (editableSkills.filter(s => s.skill && s.rating > 0).length > 0 
-                      ? (editableSkills.reduce((a, b) => a + b.rating, 0) / editableSkills.filter(s => s.skill && s.rating > 0).length).toFixed(1) 
-                      : "0.0")
-                  : (avgRating || "0.0")
+                  ? (editableSkills.reduce((a, b) => a + b.rating, 0) * 10)
+                  : forgeScore
                 }
               </span>
-              <span className="text-[8px] font-bold text-[#CBD5E1] uppercase">avg</span>
+              <span className="text-[8px] font-bold text-[#CBD5E1] uppercase">score</span>
+            </div>
+            <div className="w-px h-4 bg-[#F1F5F9]" />
+            <div className="flex items-center gap-1.5">
+              <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${rank.bg} ${rank.color} border border-current opacity-50`}>
+                {rank.label}
+              </div>
             </div>
             <div className="w-px h-4 bg-[#F1F5F9]" />
             <div className="flex items-center gap-1.5">
@@ -904,56 +743,104 @@ function ProfileCard({ candidate, onSave, onDelete }) {
           </div>
         </div>
 
-        {/* Skills Footer */}
+        {/* Tabs Footer */}
         <div className="px-6 pb-6">
-          <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between border-t border-[#F1F5F9] pt-4 group">
-            <span className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest group-hover:text-blue-500 transition-colors">Skills ({skills.length})</span>
-            {expanded ? <ChevronUp size={13} className="text-[#CBD5E1]" /> : <ChevronDown size={13} className="text-[#CBD5E1]" />}
-          </button>
+          <div className="flex items-center gap-4 border-t border-[#F1F5F9] pt-4 mb-4">
+            {['skills', 'projects', 'achievements'].map(tab => (
+              <button 
+                key={tab}
+                onClick={() => setExpanded(expanded === tab ? null : tab)}
+                className={`text-[9px] font-black uppercase tracking-widest transition-colors ${expanded === tab ? 'text-blue-600' : 'text-[#94A3B8] hover:text-slate-600'}`}
+              >
+                {tab}
+              </button>
+            ))}
+            <div className="ml-auto">
+               {expanded ? <ChevronUp size={13} className="text-[#CBD5E1]" /> : <ChevronDown size={13} className="text-[#CBD5E1]" />}
+            </div>
+          </div>
           <AnimatePresence>
             {(expanded || editing) && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="space-y-2 mt-4 overflow-hidden">
-                {editing ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest">Editing Competencies</span>
-                      <button onClick={handleAddSkill} className="p-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all">
-                        <Plus size={12} />
-                      </button>
-                    </div>
-                    <div className="space-y-3">
-                      {editableSkills.map((slot, idx) => (
-                        <div key={idx} className="grid items-center gap-2 py-1" style={{ gridTemplateColumns: "1fr auto auto" }}>
-                          <SkillDropdown 
-                            value={slot.skill} 
-                            onChange={(s) => setSkillValue(idx, s)} 
-                            usedSkills={editableSkills.map(x => x.skill).filter(Boolean)} 
-                            domain={slot.domain}
-                            onDomainChange={(d) => setDomainValue(idx, d)}
-                          />
-                          <StarRating 
-                            rating={slot.rating} 
-                            onRate={(r) => setRatingValue(idx, r)} 
-                            disabled={!slot.skill} 
-                          />
-                          <button onClick={() => handleRemoveSkill(idx)} className="p-1 text-slate-300 hover:text-rose-500 transition-colors">
-                            <X size={12} />
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                {editing || expanded === 'skills' ? (
+                  <div className="space-y-2">
+                    {editing ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest">Editing Competencies</span>
+                          <button onClick={handleAddSkill} className="p-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all">
+                            <Plus size={12} />
                           </button>
                         </div>
-                      ))}
+                        <div className="space-y-3">
+                          {editableSkills.map((slot, idx) => (
+                            <div key={idx} className="grid items-center gap-2 py-1" style={{ gridTemplateColumns: "1fr auto auto" }}>
+                              <SkillDropdown 
+                                value={slot.skill} 
+                                onChange={(s) => setSkillValue(idx, s)} 
+                                usedSkills={editableSkills.map(x => x.skill).filter(Boolean)} 
+                                domain={slot.domain}
+                                onDomainChange={(d) => setDomainValue(idx, d)}
+                              />
+                              <StarRating 
+                                rating={slot.rating} 
+                                onRate={(r) => setRatingValue(idx, r)} 
+                                disabled={!slot.skill} 
+                              />
+                              <button onClick={() => handleRemoveSkill(idx)} className="p-1 text-slate-300 hover:text-rose-500 transition-colors">
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      skills.map((s) => (
+                        <div key={s.skill} className="flex items-center justify-between py-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: DOMAIN_SVG_COLORS[findDomain(s)] || "#94A3B8" }} />
+                            <span className="text-[11px] font-bold text-[#0F172A] truncate">{s.skill}</span>
+                          </div>
+                          <StarBadge rating={s.rating} />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ) : expanded === 'projects' ? (
+                  <div className="space-y-3 py-2">
+                    <div className="flex items-center justify-between mb-2">
+                       <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest">Active Assignments</span>
+                       <button className="text-[8px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600">+ Assign</button>
+                    </div>
+                    {/* Mock Projects */}
+                    {[
+                      { title: 'Project Nexus', role: 'Lead', status: 'Active' },
+                      { title: 'CyberSync API', role: 'Dev', status: 'Done' }
+                    ].map((p, i) => (
+                      <div key={i} className="flex items-center justify-between p-2.5 bg-[#F8FAFC] rounded-xl border border-[#F1F5F9]">
+                         <div className="min-w-0">
+                            <p className="text-[10px] font-black text-[#0F172A] truncate uppercase">{p.title}</p>
+                            <p className="text-[7px] font-bold text-[#94A3B8] uppercase tracking-widest">{p.role}</p>
+                         </div>
+                         <span className={`text-[7px] font-black px-1.5 py-0.5 rounded ${p.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>{p.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : expanded === 'achievements' ? (
+                   <div className="space-y-3 py-2">
+                    <span className="text-[8px] font-black text-amber-600 uppercase tracking-widest block mb-2">Earned Honors</span>
+                    <div className="flex flex-wrap gap-2">
+                       {[Trophy, Zap, Star].map((Icon, i) => (
+                         <div key={i} className="w-8 h-8 bg-amber-50 text-amber-500 rounded-lg flex items-center justify-center border border-amber-100">
+                            <Icon size={14} />
+                         </div>
+                       ))}
+                       <button className="w-8 h-8 bg-slate-50 text-slate-300 rounded-lg flex items-center justify-center border border-dashed border-slate-200 hover:border-blue-300 hover:text-blue-500 transition-all">
+                          <Plus size={14} />
+                       </button>
                     </div>
                   </div>
-                ) : (
-                  skills.map((s) => (
-                    <div key={s.skill} className="flex items-center justify-between py-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: DOMAIN_SVG_COLORS[findDomain(s)] || "#94A3B8" }} />
-                        <span className="text-[11px] font-bold text-[#0F172A] truncate">{s.skill}</span>
-                      </div>
-                      <StarBadge rating={s.rating} />
-                    </div>
-                  ))
-                )}
+                ) : null}
               </motion.div>
             )}
           </AnimatePresence>
@@ -1213,5 +1100,161 @@ export default function AdminProfilesPage() {
         onAdd={(newMember) => setCandidates(prev => [{ ...newMember, is_registry: true }, ...prev])} 
       />
     </div>
+  );
+}
+
+// ─── Add Member Modal ────────────────────────────────────────────────────────
+function AddMemberModal({ isOpen, onClose, onAdd }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [usn, setUsn] = useState("");
+  const [phone, setPhone] = useState("");
+  const [section, setSection] = useState("A");
+  const [semester, setSemester] = useState("01");
+  const [skills, setSkills] = useState([{ skill: "", rating: 0 }]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const supabase = createClient();
+
+  if (!isOpen) return null;
+
+  const handleAddSkill = () => setSkills([...skills, { skill: "", rating: 0 }]);
+  const handleRemoveSkill = (idx) => setSkills(skills.filter((_, i) => i !== idx));
+  const updateSkill = (idx, field, val) => {
+    const newSkills = [...skills];
+    newSkills[idx][field] = val;
+    setSkills(newSkills);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const cleanSkills = skills.filter(s => s.skill && s.rating > 0);
+    
+    const newMember = {
+      full_name: name.trim(),
+      email: email.trim().toLowerCase(),
+      usn: usn.trim().toUpperCase(),
+      // phone: phone.trim(), // Omitted due to schema mismatch
+      // section: section.trim(), // Omitted due to schema mismatch
+      // semester: semester.trim(), // Omitted due to schema mismatch
+      skill_profile: JSON.stringify(cleanSkills),
+      created_at: new Date().toISOString()
+    };
+
+    const { data, error: err } = await supabase
+      .from("member_registry")
+      .insert([newMember])
+      .select();
+
+    if (err) {
+      setError(err.message);
+      setLoading(false);
+    } else {
+      onAdd(data[0]);
+      onClose();
+      setLoading(false);
+      // Reset form
+      setName(""); setEmail(""); setUsn(""); setPhone(""); setSkills([{ skill: "", rating: 0 }]);
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-sm" />
+      <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="relative bg-white rounded-[40px] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-10 border-b border-[#F1F5F9] flex justify-between items-start">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-black text-[#0F172A] uppercase tracking-tighter">Add Club Member</h2>
+            <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">Manual Node Registration & Profiling</p>
+          </div>
+          <button onClick={onClose} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all">
+            <X size={20} className="text-slate-400" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar">
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">Full Name</label>
+              <input required value={name} onChange={e => setName(e.target.value)} placeholder="Node Name" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-4 px-6 text-xs font-bold focus:border-blue-600 outline-none" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">Email Node</label>
+              <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@skillforge.io" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-4 px-6 text-xs font-bold focus:border-blue-600 outline-none" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">USN / Identity</label>
+              <input required value={usn} onChange={e => setUsn(e.target.value)} placeholder="1SK..." className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-4 px-6 text-xs font-bold focus:border-blue-600 outline-none uppercase" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">Contact Phone</label>
+              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+91 ..." className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-4 px-6 text-xs font-bold focus:border-blue-600 outline-none" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">Section</label>
+              <input value={section} onChange={e => setSection(e.target.value)} placeholder="A" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-4 px-6 text-xs font-bold focus:border-blue-600 outline-none" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">Semester</label>
+              <input value={semester} onChange={e => setSemester(e.target.value)} placeholder="01" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-4 px-6 text-xs font-bold focus:border-blue-600 outline-none" />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[10px] font-black text-[#0F172A] uppercase tracking-widest">Initial Skill Profile</h3>
+              <button type="button" onClick={handleAddSkill} className="text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline">+ Add Skill</button>
+            </div>
+            <div className="space-y-3">
+              {skills.map((s, idx) => (
+                <div key={idx} className="flex items-center gap-4 bg-[#F8FAFC] p-4 rounded-2xl border border-[#E2E8F0]">
+                  <div className="flex-1">
+                    <SkillDropdown 
+                      value={s.skill} 
+                      onChange={(val) => updateSkill(idx, 'skill', val)} 
+                      usedSkills={skills.map(x => x.skill).filter(Boolean)} 
+                    />
+                  </div>
+                  <StarRating rating={s.rating} onRate={(r) => updateSkill(idx, 'rating', r)} disabled={!s.skill} />
+                  <button type="button" onClick={() => handleRemoveSkill(idx)} className="p-2 text-slate-300 hover:text-rose-500 transition-all">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {error && (
+            <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600">
+               <AlertCircle size={18} />
+               <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">
+                  {error.includes("column") ? `Could not find the 'phone' column of 'member_registry' in the schema cache` : error}
+               </p>
+            </div>
+          )}
+        </form>
+
+        <div className="p-10 border-t border-[#F1F5F9] bg-[#F8FAFC]">
+          <button 
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full bg-[#0F172A] text-white py-5 rounded-[28px] font-black text-[11px] tracking-[0.3em] uppercase shadow-2xl shadow-slate-200 flex items-center justify-center gap-3 hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-50"
+          >
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <Briefcase size={16} />}
+            Establish Member Node
+          </button>
+        </div>
+      </motion.div>
+    </div>,
+    document.body
   );
 }

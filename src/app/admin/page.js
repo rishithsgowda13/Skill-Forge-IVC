@@ -39,46 +39,73 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function loadData() {
-      // Fetch Submissions
-      const { data: subData } = await supabase
-        .from("submissions")
-        .select("*, profiles(*)")
-        .order("submitted_at", { ascending: false });
+      setLoading(true);
       
-      // Fetch Leaderboard
-      const { data: leadData } = await supabase
-        .from("submissions")
-        .select("*, profiles!user_id(full_name, avatar_url)")
-        .order("total_score", { ascending: false })
-        .order("time_taken", { ascending: true })
-        .limit(10);
-
-      // Fetch Quizzes count
-      const { count: quizCount } = await supabase
-        .from("quizzes")
+      // Fetch Total Members
+      const { count: memberCount } = await supabase
+        .from("member_registry")
         .select("*", { count: 'exact', head: true });
 
-      // Fetch Users for Team Utilization
+      // Fetch Projects
+      const { data: projData } = await supabase
+        .from("projects")
+        .select("*");
+      
+      const activeProjCount = projData?.filter(p => p.status === 'active').length || 0;
+      
+      // Calculate real avg completion based on phase status
+      let totalComp = 0;
+      let totalPhasesCount = 0;
+      if (projData?.length > 0) {
+        projData.forEach(p => {
+          if (p.status === 'completed') {
+            totalComp += 100;
+            totalPhasesCount += 1;
+          } else {
+            const phases = typeof p.phases === 'string' ? JSON.parse(p.phases) : (p.phases || []);
+            if (phases.length > 0) {
+              const completedCount = phases.filter(ph => ph.is_completed).length;
+              totalComp += (completedCount / phases.length) * 100;
+            }
+          }
+        });
+      }
+      const avgComp = projData?.length > 0 ? (totalComp / projData.length).toFixed(0) : 0;
+
+      // Fetch Leaderboard from member_registry
+      const { data: leadData } = await supabase
+        .from("member_registry")
+        .select("full_name, email, usn, skill_profile");
+      
+      const scoredLeaderboard = (leadData || []).map(m => {
+        let skills = [];
+        try {
+          const parsed = typeof m.skill_profile === "string" ? JSON.parse(m.skill_profile) : m.skill_profile;
+          skills = (parsed || []).filter(s => s.skill && s.rating > 0);
+        } catch (e) {}
+        return {
+          ...m,
+          total_score: skills.reduce((s, k) => s + k.rating, 0) * 10
+        };
+      }).sort((a, b) => b.total_score - a.total_score).slice(0, 10);
+
+      // Fetch Latest Registered Members
       const { data: userData } = await supabase
-        .from("profiles")
-        .select("full_name, role, id")
+        .from("member_registry")
+        .select("full_name, usn, email")
+        .order("created_at", { ascending: false })
         .limit(5);
 
-      // Calculate Stats
-      const totalSubmissions = subData?.length || 0;
-      const flaggedCount = subData?.filter(s => s.flagged).length || 0;
-
       setRealStats({
-        totalSessions: totalSubmissions,
-        platformPulse: totalSubmissions > 0 ? "98.2%" : "0%",
-        activeQuizzes: quizCount || 0,
-        avgCompletion: totalSubmissions > 0 ? `${((totalSubmissions / (quizCount || 1)) * 10).toFixed(0)}%` : "0%",
-        securityFlags: flaggedCount,
-        timeOptimized: "4h 12m"
+        totalMembers: memberCount || 0,
+        activeInitiatives: activeProjCount,
+        avgCompletion: `${avgComp}%`,
+        latePhases: 0, // Logic for this later
+        systemHealth: "100%",
+        totalSkillsTracked: scoredLeaderboard.reduce((acc, curr) => acc + (curr.skill_profile ? (typeof curr.skill_profile === 'string' ? JSON.parse(curr.skill_profile).length : curr.skill_profile.length) : 0), 0)
       });
 
-      setSubmissions(subData || []);
-      setLeaderboard(leadData || []);
+      setLeaderboard(scoredLeaderboard);
       setTeamUtilization(userData || []);
       setLoading(false);
     }
@@ -86,12 +113,12 @@ export default function AdminDashboard() {
   }, []);
 
   const statsDisplay = [
-    { label: "Sessions", desc: "Total attempts", value: realStats.totalSessions, icon: Monitor, color: "#2563EB" },
-    { label: "Uptime", desc: "Platform health", value: realStats.platformPulse, icon: Activity, color: "#10B981" },
-    { label: "Protocols", desc: "Active quizzes", value: realStats.activeQuizzes, icon: FileCheck, color: "#6366F1" },
-    { label: "Completion", desc: "Average rate", value: realStats.avgCompletion, icon: TrendingUp, color: "#F59E0B" },
-    { label: "Flags", desc: "Security alerts", value: realStats.securityFlags, icon: ShieldAlert, color: "#EF4444" },
-    { label: "Optimized", desc: "Time saved", value: realStats.timeOptimized, icon: Clock, color: "#0EA5E9" },
+    { label: "Members", desc: "Registered Nodes", value: realStats.totalMembers, icon: Users, color: "#2563EB" },
+    { label: "Initiatives", desc: "Active Projects", value: realStats.activeInitiatives, icon: Activity, color: "#10B981" },
+    { label: "Completion", desc: "Overall Progress", value: realStats.avgCompletion, icon: FileCheck, color: "#6366F1" },
+    { label: "Late Tasks", desc: "Overdue Phases", value: realStats.latePhases, icon: ShieldAlert, color: "#EF4444" },
+    { label: "Pulse", desc: "System Status", value: realStats.systemHealth, icon: Monitor, color: "#F59E0B" },
+    { label: "Mastery", desc: "Skills Cataloged", value: realStats.totalSkillsTracked, icon: Trophy, color: "#0EA5E9" },
   ];
 
   return (
@@ -137,9 +164,9 @@ export default function AdminDashboard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Trophy size={18} className="text-[#2563EB]" />
-            <h3 className="text-base font-black text-[#0F172A] uppercase tracking-tight">Leaderboard</h3>
+          <h3 className="text-base font-black text-[#0F172A] uppercase tracking-tight">Active Rankings</h3>
           </div>
-          <span className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-wider">Top 10 · Score</span>
+          <span className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-wider">Top 10 · Mastery</span>
         </div>
 
         {!loading && leaderboard.length === 0 ? (
@@ -148,7 +175,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
             {leaderboard.map((item, index) => (
               <motion.div
-                key={item.id}
+                key={item.email}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: index * 0.03 }}
@@ -163,18 +190,20 @@ export default function AdminDashboard() {
                   }`}>
                     {index + 1}
                   </span>
-                  <div className="w-7 h-7 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
-                    <img 
-                      src={item.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.user_id}`} 
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="w-7 h-7 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center font-black text-[10px] text-slate-400">
+                    {item.full_name?.[0] || "U"}
                   </div>
-                  <span className="text-xs font-bold text-[#0F172A] group-hover:text-blue-600 transition-colors">
-                    {item.profiles?.full_name || "Challenger"}
-                  </span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-[#0F172A] group-hover:text-blue-600 transition-colors truncate">
+                      {item.full_name || "Member"}
+                    </span>
+                    <span className="text-[8px] font-bold text-[#94A3B8] uppercase tracking-widest">{item.usn}</span>
+                  </div>
                 </div>
-                <span className="text-sm font-black text-[#0F172A] tabular-nums">{item.total_score}</span>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-black text-[#0F172A] tabular-nums">{item.total_score}</span>
+                  <span className="text-[7px] font-black text-amber-500 uppercase tracking-widest">Mastery</span>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -194,9 +223,9 @@ export default function AdminDashboard() {
           
           <div className="space-y-5">
             {[
-              { label: "MCQ Validation", value: submissions.length > 0 ? 92 : 0, color: "#10B981" },
-              { label: "Paragraph Analysis", value: submissions.length > 0 ? 68 : 0, color: "#F59E0B" },
-              { label: "Real-time Sync", value: submissions.length > 0 ? 84 : 0, color: "#2563EB" }
+              { label: "Phase Progression", value: realStats.avgCompletion.replace('%', ''), color: "#10B981" },
+              { label: "Skill Mastery", value: leaderboard.length > 0 ? (leaderboard.reduce((a, b) => a + b.total_score, 0) / (leaderboard.length * 1000) * 100).toFixed(0) : 0, color: "#F59E0B" },
+              { label: "Project Velocity", value: realStats.activeInitiatives > 0 ? 100 : 0, color: "#2563EB" }
             ].map((flow) => (
               <div key={flow.label} className="space-y-2">
                 <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
@@ -225,7 +254,7 @@ export default function AdminDashboard() {
               <h3 className="text-base font-black text-[#0F172A] uppercase tracking-tight">Members</h3>
             </div>
             <button 
-              onClick={() => router.push('/quiz/admin/users')}
+              onClick={() => router.push('/admin/users')}
               className="text-[9px] font-black text-blue-600 uppercase tracking-wider hover:underline flex items-center gap-1"
             >
               View All <ChevronRight size={11} strokeWidth={3} />
@@ -235,20 +264,20 @@ export default function AdminDashboard() {
           <div className="space-y-1">
             {teamUtilization.length === 0 ? (
               <div className="py-10 text-center text-[10px] uppercase font-bold tracking-widest text-[#CBD5E1]">No members registered</div>
-            ) : teamUtilization.map((user) => (
-              <div key={user.id} className="flex items-center justify-between py-3 border-b border-[#F8FAFC] last:border-none">
+            ) : teamUtilization.map((user, i) => (
+              <div key={user.email} className="flex items-center justify-between py-3 border-b border-[#F8FAFC] last:border-none">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 bg-[#0F172A] rounded-xl flex items-center justify-center text-white font-black text-[10px]">
                     {user.full_name?.split(" ").map(n => n[0]).join("") || "U"}
                   </div>
                   <div>
                     <p className="text-xs font-bold text-[#0F172A] leading-tight">{user.full_name || "Unknown"}</p>
-                    <p className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-wider">{user.role || "candidate"}</p>
+                    <p className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-wider">{user.usn || "Member"}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-wider">Active</span>
+                  <span className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-wider">Verified</span>
                 </div>
               </div>
             ))}

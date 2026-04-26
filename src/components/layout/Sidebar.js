@@ -18,7 +18,9 @@ import {
   BookOpen,
   UserCheck,
   Star,
-  LayoutGrid
+  LayoutGrid,
+  ShieldAlert,
+  MessageSquare
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
@@ -69,25 +71,34 @@ export default function Sidebar() {
     router.push("/login");
   };
 
-  const isAdmin = role === "admin" || role === "evaluator";
-
   const adminItems = [
-    { href: "/quiz/admin", label: "Control Center", icon: LayoutDashboard },
-    { href: "/quiz/admin/users", label: "Node Registry", icon: Users },
-    { href: "/quiz/admin/quizzes", label: "Protocols", icon: FileText },
-    { href: "/quiz/admin/round2", label: "Reports", icon: Activity },
-    { href: "/quiz/admin/round3", label: "R3 Selection", icon: UserCheck },
-    { href: "/quiz/admin/interview", label: "Interview Panel", icon: Star },
-    { href: "/quiz/admin/profiles", label: "Member Profiles", icon: LayoutGrid },
+    { href: "/admin", label: "Control Center", icon: LayoutDashboard },
+    { href: "/dashboard/chat", label: "Neural Monitoring", icon: MessageSquare },
+    { href: "/admin/profiles", label: "Member Profiles", icon: LayoutGrid },
+    { href: "/admin/projects", label: "Project Nexus", icon: Activity },
+    { href: "/admin/roles", label: "Role Nexus", icon: ShieldCheck },
+    { href: "/admin/achievements", label: "Hall of Valor", icon: Trophy },
+    { href: "/admin/users", label: "Node Registry", icon: Users },
+  ];
+
+  const mentorItems = [
+    { href: "/mentor", label: "Mentor Center", icon: LayoutDashboard },
+    { href: "/dashboard/chat", label: "Node Communication", icon: MessageSquare },
+    { href: "/mentor/projects", label: "Project Oversight", icon: Activity },
   ];
 
   const candidateItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/quiz/access", label: "Protocol", icon: Zap },
-    { href: "/dashboard/research", label: "Secondary Research", icon: BookOpen },
+    { href: "/dashboard/chat", label: "Communication", icon: MessageSquare },
+    { href: "/dashboard/projects", label: "My Assignments", icon: Activity },
+    { href: "/dashboard/achievements", label: "Achievements", icon: Trophy },
+    { href: "/dashboard/research", label: "Skill Forge", icon: BookOpen },
   ];
 
-  const navItems = isAdmin ? adminItems : candidateItems;
+  const isAdmin = role === "admin" || role === "evaluator";
+  const isMentor = role === "mentor";
+
+  const navItems = isAdmin ? adminItems : (isMentor ? mentorItems : candidateItems);
 
   return (
     <motion.aside 
@@ -117,7 +128,7 @@ export default function Sidebar() {
                     exit={{ opacity: 0, x: -10 }}
                     transition={{ delay: 0.1 }}
                   >
-                    <span className="font-[900] text-xl text-[#0F172A] tracking-tight block leading-none">Skill Forge</span>
+                    <span className="font-[900] text-xl text-[#0F172A] tracking-tight block leading-none">SkillForge</span>
                   </motion.div>
                 )}
               </AnimatePresence>
