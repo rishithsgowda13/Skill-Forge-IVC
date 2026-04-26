@@ -9,7 +9,8 @@ import {
   Search,
   Activity,
   User,
-  Hash
+  Hash,
+  ShieldAlert
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import ProjectChat from "@/components/projects/ProjectChat";
