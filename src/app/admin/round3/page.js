@@ -176,7 +176,7 @@ export default function Round3SelectionPage() {
           </button>
 
           <button
-            onClick={() => router.push("/quiz/admin/interview")}
+            onClick={() => router.push("/admin/interview")}
             className="flex items-center gap-2 bg-[#0F172A] text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
           >
             <Star size={14} />
