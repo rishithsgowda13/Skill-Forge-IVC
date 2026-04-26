@@ -53,13 +53,21 @@ export default function AdminDashboard() {
       
       const activeProjCount = projData?.filter(p => p.status === 'active').length || 0;
       
-      // Calculate avg completion
+      // Calculate real avg completion based on phase status
       let totalComp = 0;
+      let totalPhasesCount = 0;
       if (projData?.length > 0) {
-        // Mocking a bit here based on phases if they exist
         projData.forEach(p => {
-          if (p.status === 'completed') totalComp += 100;
-          else if (p.phases?.length > 0) totalComp += 30; // Simple heuristic
+          if (p.status === 'completed') {
+            totalComp += 100;
+            totalPhasesCount += 1;
+          } else {
+            const phases = typeof p.phases === 'string' ? JSON.parse(p.phases) : (p.phases || []);
+            if (phases.length > 0) {
+              const completedCount = phases.filter(ph => ph.is_completed).length;
+              totalComp += (completedCount / phases.length) * 100;
+            }
+          }
         });
       }
       const avgComp = projData?.length > 0 ? (totalComp / projData.length).toFixed(0) : 0;

@@ -177,29 +177,32 @@ export default function CandidateProjectsPage() {
                   </div>
                </div>
 
-               <div className="space-y-10 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-0.5 before:bg-[#F1F5F9]">
-                  {(selectedProject.phases || []).map((phase, i) => (
-                    <div key={i} className="relative pl-12 group/phase">
-                       <div className={`absolute left-0 top-0 w-10 h-10 rounded-xl border-4 border-white flex items-center justify-center z-10 shadow-sm transition-all ${i === 0 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                          <span className="text-xs font-black">{i + 1}</span>
-                       </div>
-                       <div className="bg-[#F8FAFC] rounded-[32px] border border-[#F1F5F9] overflow-hidden hover:bg-white hover:border-blue-200 hover:shadow-xl transition-all">
-                          {phase.image && (
-                            <div className="h-32 w-full overflow-hidden">
-                               <img src={phase.image} alt={phase.title} className="w-full h-full object-cover opacity-80 group-hover/phase:scale-105 transition-transform duration-700" />
+               <div className="space-y-12 relative before:absolute before:left-[31px] before:top-4 before:bottom-4 before:w-[2px] before:bg-slate-100">
+                  {getArray(selectedProject.phases).map((phase, i) => {
+                    const isCompleted = phase.is_completed;
+                    const isActive = !isCompleted && (i === 0 || getArray(selectedProject.phases)[i-1]?.is_completed);
+                    
+                    return (
+                      <div key={i} className="relative pl-20 group/phase">
+                         <div className={`absolute left-0 top-0 w-16 h-16 rounded-[24px] border-4 border-white flex items-center justify-center z-10 shadow-2xl transition-all duration-500 ${isCompleted ? 'bg-emerald-500 text-white rotate-12' : isActive ? 'bg-blue-600 text-white scale-110' : 'bg-slate-100 text-slate-400 opacity-50'}`}>
+                            {isCompleted ? <CheckCircle2 size={28} /> : <span className="text-xl font-black">{i + 1}</span>}
+                         </div>
+                         <div className={`bg-white rounded-[48px] border transition-all duration-500 p-10 space-y-6 hover:shadow-2xl ${isActive ? 'border-blue-200 ring-4 ring-blue-50/50' : isCompleted ? 'border-emerald-100 opacity-80' : 'border-[#E2E8F0] opacity-40'}`}>
+                            <div className="flex justify-between items-start">
+                               <div>
+                                  <div className="flex items-center gap-3 mb-2">
+                                     <h4 className={`text-2xl font-black uppercase tracking-tighter ${isActive ? 'text-blue-600' : isCompleted ? 'text-emerald-600' : 'text-[#0F172A]'}`}>{phase.title}</h4>
+                                     {isActive && <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-ping" />}
+                                  </div>
+                                  <div className={`flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] ${isActive ? 'text-blue-500' : 'text-slate-400'}`}>
+                                     <Calendar size={14} />
+                                     Neural Deadline: {phase.deadline ? new Date(phase.deadline).toLocaleDateString() : 'TBD'}
+                                  </div>
+                               </div>
+                               <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${isCompleted ? 'bg-emerald-50 text-emerald-600' : isActive ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400'}`}>
+                                  {isCompleted ? 'Post-Execution' : isActive ? 'Operational' : 'Standby'}
+                               </span>
                             </div>
-                          )}
-                          <div className="p-6 space-y-3">
-                             <div className="flex justify-between items-start">
-                                <div>
-                                   <h4 className="text-sm font-black text-[#0F172A] uppercase tracking-tight">{phase.title}</h4>
-                                   <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest mt-1">Deadline: {phase.deadline ? new Date(phase.deadline).toLocaleDateString() : 'N/A'}</p>
-                                </div>
-                                {i === 0 && <span className="text-[8px] font-black bg-emerald-50 text-emerald-500 px-2 py-1 rounded-md border border-emerald-100">ACTIVE STAGE</span>}
-                             </div>
-                             <p className="text-[11px] font-medium text-[#64748B] leading-relaxed">
-                                {phase.description || "Core objectives and deliverables for this development node."}
-                             </p>
                           </div>
                        </div>
                     </div>

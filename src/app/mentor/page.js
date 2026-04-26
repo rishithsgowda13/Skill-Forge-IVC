@@ -124,6 +124,21 @@ export default function MentorDashboard() {
      }
   };
 
+  const handleApproveProject = async () => {
+    if (!confirm("Confirm Master's Verdict? This initiative will be marked as fully operational.")) return;
+
+    const { error } = await supabase
+      .from('projects')
+      .update({ status: 'completed' })
+      .eq('id', selectedProject.id);
+
+    if (!error) {
+      const updatedProj = { ...selectedProject, status: 'completed' };
+      setSelectedProject(updatedProj);
+      setProjects(projects.map(p => p.id === selectedProject.id ? updatedProj : p));
+    }
+  };
+
   const getArray = (val) => {
     if (!val) return [];
     if (Array.isArray(val)) return val;
@@ -188,6 +203,41 @@ export default function MentorDashboard() {
                  userName={mentorName} 
                  isMentor={true}
                />
+
+               {/* Initiative Finalization (Master's Verdict) */}
+               {getArray(selectedProject.phases).every(p => p.is_completed) && selectedProject.status !== 'completed' && (
+                 <motion.div 
+                   initial={{ opacity: 0, scale: 0.9 }}
+                   animate={{ opacity: 1, scale: 1 }}
+                   className="bg-[#0F172A] rounded-[40px] p-12 text-white text-center space-y-6 shadow-2xl shadow-blue-900/20 border border-white/10"
+                 >
+                    <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto shadow-xl shadow-blue-500/20">
+                       <ShieldCheck size={40} className="text-white" />
+                    </div>
+                    <div className="space-y-2">
+                       <h3 className="text-2xl font-black uppercase tracking-tighter">Master's Verdict Required</h3>
+                       <p className="text-xs font-bold text-white/40 uppercase tracking-[0.2em]">All operational nodes are finalized. Deploy initiative?</p>
+                    </div>
+                    <button 
+                      onClick={handleApproveProject}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white py-6 rounded-3xl font-black text-[11px] tracking-[0.4em] uppercase transition-all shadow-xl shadow-blue-600/20"
+                    >
+                      Authorize Deployment
+                    </button>
+                 </motion.div>
+               )}
+
+               {selectedProject.status === 'completed' && (
+                 <div className="bg-emerald-50 rounded-[40px] p-12 border border-emerald-100 text-center space-y-4">
+                    <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto text-white shadow-lg shadow-emerald-200">
+                       <CheckCircle2 size={32} />
+                    </div>
+                    <div>
+                       <h3 className="text-xl font-black text-emerald-900 uppercase tracking-tighter">Initiative Operational</h3>
+                       <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-1">This project has been archived as successfully executed.</p>
+                    </div>
+                 </div>
+               )}
             </div>
 
             <div className="space-y-10">
