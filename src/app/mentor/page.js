@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Target
 } from "lucide-react";
+import ProjectChat from "@/components/projects/ProjectChat";
 import { createClient } from "@/lib/supabase";
 
 export default function MentorDashboard() {
@@ -180,44 +181,13 @@ export default function MentorDashboard() {
                   </div>
                </div>
 
-               {/* Activity Stream */}
-               <div className="bg-white rounded-[40px] p-12 border border-[#E2E8F0] shadow-sm space-y-10">
-                  <h3 className="text-[12px] font-black text-[#0F172A] uppercase tracking-[0.3em] flex items-center gap-3">
-                    <Activity size={16} className="text-blue-600" />
-                    Activity Stream
-                  </h3>
-                  <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                     {getArray(selectedProject.updates).map((act, i) => (
-                      <div key={i} className={`flex gap-4 ${act.email === userEmail ? 'flex-row-reverse' : ''}`}>
-                        <div className="w-10 h-10 rounded-2xl bg-slate-100 border border-[#F1F5F9] overflow-hidden flex-shrink-0 shadow-sm">
-                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${act.user}`} alt="" />
-                        </div>
-                        <div className={`p-6 rounded-[28px] border transition-all max-w-[80%] ${act.email === userEmail ? 'bg-blue-600 text-white border-blue-500 shadow-xl shadow-blue-100' : 'bg-[#F8FAFC] border-[#F1F5F9] text-[#0F172A]'}`}>
-                          <div className={`flex justify-between items-center mb-2 ${act.email === userEmail ? 'text-white/60' : 'text-slate-400'}`}>
-                             <span className="text-[9px] font-black uppercase tracking-widest">{act.user}</span>
-                             <span className="text-[8px] font-bold">{new Date(act.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          </div>
-                          <p className="text-xs font-medium leading-relaxed italic">"{act.text}"</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="pt-6 flex gap-4 border-t border-[#F1F5F9]">
-                     <input 
-                       value={updateText}
-                       onChange={(e) => setUpdateText(e.target.value)}
-                       onKeyDown={(e) => e.key === 'Enter' && handleSendUpdate()}
-                       placeholder="Submit mentor guidance..."
-                       className="flex-1 bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-4 px-8 text-xs font-bold text-[#0F172A] focus:outline-none focus:border-blue-600 transition-all shadow-inner"
-                     />
-                     <button 
-                       onClick={handleSendUpdate}
-                       className="bg-blue-600 text-white p-4 rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95 flex-shrink-0"
-                     >
-                       <Send size={24} />
-                     </button>
-                  </div>
-               </div>
+               {/* Neural Communication Hub */}
+               <ProjectChat 
+                 projectId={selectedProject.id} 
+                 userEmail={userEmail} 
+                 userName={mentorName} 
+                 isMentor={true}
+               />
             </div>
 
             <div className="space-y-10">

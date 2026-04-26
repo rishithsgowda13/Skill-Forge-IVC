@@ -18,6 +18,7 @@ import {
   Briefcase,
   Target
 } from "lucide-react";
+import ProjectChat from "@/components/projects/ProjectChat";
 import { createClient } from "@/lib/supabase";
 
 export default function CandidateProjectsPage() {
@@ -245,51 +246,6 @@ export default function CandidateProjectsPage() {
                   <span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span>
                </div>
             </div>
-
-            {/* Activity Feed */}
-            <div className="bg-white rounded-[40px] p-10 border border-[#E2E8F0] shadow-sm space-y-8">
-               <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-black text-[#0F172A] uppercase tracking-tighter">Activity Stream</h3>
-                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">REAL-TIME SYNC</span>
-               </div>
-               <div className="space-y-6">
-                   {getArray(selectedProject.updates).length === 0 ? (
-                     <div className="py-10 text-center opacity-30">
-                        <MessageSquare size={32} className="mx-auto mb-2 text-slate-300" />
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">No activity logs recorded</p>
-                     </div>
-                   ) : getArray(selectedProject.updates).map((act, i) => (
-                    <div key={i} className={`flex gap-4 ${act.email === userEmail ? 'flex-row-reverse' : ''}`}>
-                      <div className="w-10 h-10 rounded-2xl bg-slate-100 border border-[#F1F5F9] overflow-hidden flex-shrink-0">
-                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${act.user}`} alt="" />
-                      </div>
-                      <div className={`p-5 rounded-3xl border transition-all max-w-[80%] ${act.email === userEmail ? 'bg-blue-600 text-white border-blue-500 shadow-xl shadow-blue-100' : 'bg-[#F8FAFC] border-[#F1F5F9] text-[#0F172A]'}`}>
-                        <div className={`flex justify-between items-center mb-1.5 ${act.email === userEmail ? 'text-white/60' : 'text-slate-400'}`}>
-                           <span className="text-[9px] font-black uppercase tracking-widest">{act.email === userEmail ? "You" : act.user}</span>
-                           <span className="text-[8px] font-bold">{new Date(act.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                        <p className="text-xs font-medium leading-relaxed italic">"{act.text}"</p>
-                      </div>
-                    </div>
-                  ))}
-               </div>
-               
-               <div className="pt-4 flex gap-3">
-                  <input 
-                    value={updateText}
-                    onChange={(e) => setUpdateText(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendUpdate()}
-                    placeholder="Submit daily update..."
-                    className="flex-1 bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-4 px-6 text-xs font-bold text-[#0F172A] focus:outline-none focus:border-blue-600 transition-all shadow-inner"
-                  />
-                  <button 
-                    onClick={handleSendUpdate}
-                    className="bg-blue-600 text-white p-4 rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all active:scale-90 flex-shrink-0"
-                  >
-                    <Send size={20} />
-                  </button>
-               </div>
-            </div>
           </div>
 
           <div className="space-y-8">
@@ -317,10 +273,17 @@ export default function CandidateProjectsPage() {
                      </div>
                    ))}
                 </div>
-                <button className="w-full bg-[#0F172A] text-white py-4 rounded-2xl font-black text-[9px] tracking-[0.3em] uppercase shadow-xl shadow-slate-100">
-                  Join Project Chat
-                </button>
-             </div>
+                <div className="pt-4 flex gap-3">
+                  <button className="flex-1 bg-blue-50 text-blue-600 py-3 rounded-xl font-black text-[9px] tracking-widest uppercase hover:bg-blue-100 transition-all">Submit Development Log</button>
+               </div>
+            </div>
+
+            {/* Neural Communication Hub */}
+            <ProjectChat 
+               projectId={selectedProject.id} 
+               userEmail={userEmail} 
+               userName={profile?.full_name} 
+            />
 
              {/* Resources */}
              <div className="bg-white rounded-[40px] p-8 border border-[#E2E8F0] shadow-sm space-y-6">
