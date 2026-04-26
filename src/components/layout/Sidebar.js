@@ -85,6 +85,7 @@ export default function Sidebar() {
 
   const candidateItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard/chat", label: "Communication", icon: MessageSquare },
     { href: "/dashboard/projects", label: "My Assignments", icon: Activity },
     { href: "/dashboard/achievements", label: "Achievements", icon: Trophy },
     { href: "/dashboard/research", label: "Skill Forge", icon: BookOpen },

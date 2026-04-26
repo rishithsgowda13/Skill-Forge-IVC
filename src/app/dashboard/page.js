@@ -35,42 +35,39 @@ export default function DashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [profile, setProfile] = useState(null);
   const [activeProjCount, setActiveProjCount] = useState(0);
+  const [totalActiveProjCount, setTotalActiveProjCount] = useState(0);
 
   useEffect(() => {
     setIsMounted(true);
-    const cookies = document.cookie.split(';');
-    const sessionCookie = cookies.find(c => c.trim().startsWith('mock_session='));
-    if (sessionCookie) {
-      const val = sessionCookie.split('=')[1];
-      setRole(val.split(':')[0]);
-    }
-
+    
     async function loadData() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // Fetch Profile
-        const { data: prof } = await supabase
-          .from("member_registry")
-          .select("*")
-          .eq("email", user.email)
-          .single();
-        setProfile(prof);
+      // Get User Email
+      const cookies = document.cookie.split(';');
+      const sessionCookie = cookies.find(c => c.trim().startsWith('mock_session='));
+      let email = "";
+      if (sessionCookie) {
+        email = sessionCookie.split('=')[1].split(':')[1];
+      }
 
-        // Fetch Projects where user is a member
-        const { data: projData } = await supabase
-          .from("projects")
-          .select("team");
-        
-        const myProjs = (projData || []).filter(p => {
+      // Fetch Profile
+      const { data: prof } = await supabase.from('member_registry').select('*').eq('email', email).single();
+      setProfile(prof);
+
+      // Fetch All Active Projects
+      const { data: allProj } = await supabase.from('projects').select('*').eq('status', 'active');
+      setTotalActiveProjCount(allProj?.length || 0);
+
+      // Fetch My Projects
+      if (email) {
+        const myProjs = (allProj || []).filter(p => {
           try {
             const team = Array.isArray(p.team) ? p.team : (typeof p.team === 'string' ? JSON.parse(p.team) : []);
-            return team.some(m => m.email === user.email);
+            return team.some(m => m.email === email);
           } catch { return false; }
         });
         setActiveProjCount(myProjs.length);
-      } else {
-        setProfile(null);
       }
+
       setLoading(false);
     }
     loadData();
@@ -85,9 +82,9 @@ export default function DashboardPage() {
   } catch(e) {}
 
   const stats = [
-    { title: "ACTIVE PROJECTS", value: activeProjCount, icon: Activity, color: "text-blue-600", bg: "bg-blue-50" },
-    { title: "SKILLS VERIFIED", value: skills.length, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-50" },
-    { title: "MASTERY SCORE", value: skills.reduce((s, k) => s + k.rating, 0) * 10, icon: Zap, color: "text-indigo-600", bg: "bg-indigo-50" },
+    { title: "TOTAL INITIATIVES", value: totalActiveProjCount, icon: LayoutGrid, color: "text-blue-600", bg: "bg-blue-50" },
+    { title: "MY ASSIGNMENTS", value: activeProjCount, icon: Activity, color: "text-emerald-500", bg: "bg-emerald-50" },
+    { title: "NEURAL MASTERY", value: skills.reduce((s, k) => s + k.rating, 0) * 10, icon: Zap, color: "text-indigo-600", bg: "bg-indigo-50" },
     { title: "ACHIEVEMENTS", value: "0", icon: Trophy, color: "text-amber-500", bg: "bg-amber-50" },
   ];
 

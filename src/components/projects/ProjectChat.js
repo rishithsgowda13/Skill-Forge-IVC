@@ -11,17 +11,20 @@ export default function ProjectChat({ projectId, userEmail, userName, isMentor =
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef(null);
 
+  const isGlobal = projectId === 'global';
+  const tableName = isGlobal ? 'global_messages' : 'project_messages';
+
   useEffect(() => {
     fetchMessages();
     
     // Subscribe to new messages
     const channel = supabase
-      .channel(`project_chat_${projectId}`)
+      .channel(`chat_${projectId}`)
       .on('postgres_changes', { 
         event: 'INSERT', 
         schema: 'public', 
-        table: 'project_messages',
-        filter: `project_id=eq.${projectId}`
+        table: tableName,
+        filter: isGlobal ? undefined : `project_id=eq.${projectId}`
       }, (payload) => {
         setMessages(prev => [...prev, payload.new]);
       })
@@ -39,11 +42,11 @@ export default function ProjectChat({ projectId, userEmail, userName, isMentor =
   }, [messages]);
 
   async function fetchMessages() {
-    const { data, error } = await supabase
-      .from('project_messages')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('created_at', { ascending: true });
+    let query = supabase.from(tableName).select('*');
+    if (!isGlobal) {
+      query = query.eq('project_id', projectId);
+    }
+    const { data, error } = await query.order('created_at', { ascending: true });
     
     if (!error) setMessages(data || []);
     setLoading(false);
@@ -54,13 +57,13 @@ export default function ProjectChat({ projectId, userEmail, userName, isMentor =
     if (!newMessage.trim()) return;
 
     const message = {
-      project_id: projectId,
       sender_email: userEmail,
       sender_name: userName || "Anonymous Node",
       content: newMessage.trim()
     };
+    if (!isGlobal) message.project_id = projectId;
 
-    const { error } = await supabase.from('project_messages').insert([message]);
+    const { error } = await supabase.from(tableName).insert([message]);
     if (!error) {
       setNewMessage("");
     }
@@ -70,10 +73,14 @@ export default function ProjectChat({ projectId, userEmail, userName, isMentor =
     <div className="bg-white rounded-[40px] border border-[#E2E8F0] shadow-sm flex flex-col h-[600px] overflow-hidden">
       <div className="p-8 border-b border-[#F1F5F9] flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <MessageSquare size={18} className="text-blue-600" />
+          {isGlobal ? <Globe size={18} className="text-blue-600" /> : <MessageSquare size={18} className="text-blue-600" />}
           <div>
-            <h3 className="text-sm font-black text-[#0F172A] uppercase tracking-tighter">Neural Communication</h3>
-            <p className="text-[8px] font-black text-[#94A3B8] uppercase tracking-[0.2em] mt-0.5">Encrypted Protocol Active</p>
+            <h3 className="text-sm font-black text-[#0F172A] uppercase tracking-tighter">
+              {isGlobal ? "SkillForge Global Broadcast" : "Neural Communication"}
+            </h3>
+            <p className="text-[8px] font-black text-[#94A3B8] uppercase tracking-[0.2em] mt-0.5">
+              {isGlobal ? "Public Node Sync" : "Encrypted Team Protocol"}
+            </p>
           </div>
         </div>
         <div className="flex -space-x-2">

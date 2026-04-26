@@ -47,11 +47,56 @@ const COLOR_MAP = {
 export default function CandidateAchievementsPage() {
   const supabase = createClient();
   const [achievements, setAchievements] = useState([]);
+  const [userAchievements, setUserAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [profile, setProfile] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchAchievements();
+    fetchUserAchievements();
+    loadProfile();
   }, []);
+
+  async function loadProfile() {
+    const cookies = document.cookie.split(';');
+    const sessionCookie = cookies.find(c => c.trim().startsWith('mock_session='));
+    if (sessionCookie) {
+      const email = sessionCookie.split('=')[1].split(':')[1];
+      const { data } = await supabase.from('member_registry').select('*').eq('email', email).single();
+      setProfile(data);
+    }
+  }
+
+  async function fetchUserAchievements() {
+    const { data } = await supabase
+      .from('user_achievements')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setUserAchievements(data || []);
+  }
+
+  const handleAddAchievement = async (e) => {
+    e.preventDefault();
+    if (!newTitle.trim() || !profile) return;
+    setIsSubmitting(true);
+
+    const { error } = await supabase.from('user_achievements').insert([{
+      user_email: profile.email,
+      user_name: profile.full_name,
+      title: newTitle,
+      description: newDesc
+    }]);
+
+    if (!error) {
+      setNewTitle("");
+      setNewDesc("");
+      fetchUserAchievements();
+    }
+    setIsSubmitting(false);
+  };
 
   async function fetchAchievements() {
     setLoading(true);
@@ -176,6 +221,82 @@ export default function CandidateAchievementsPage() {
                 </div>
               );
             })}
+         </div>
+      </section>
+
+      {/* Member Milestones Broadcast */}
+      <section className="space-y-8">
+         <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+               <div className="p-3 bg-blue-50 rounded-2xl">
+                 <Sparkles size={20} className="text-blue-500" />
+               </div>
+               <h2 className="text-xl font-black text-[#0F172A] uppercase tracking-tighter">Forge-wide Broadcasts</h2>
+            </div>
+            <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em]">Community Submissions</p>
+         </div>
+
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Submission Form */}
+            <div className="bg-white rounded-[40px] p-10 border border-[#E2E8F0] shadow-sm space-y-6">
+               <div className="space-y-1">
+                  <h3 className="text-sm font-black text-[#0F172A] uppercase tracking-tight">Broadcast Milestone</h3>
+                  <p className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-widest">Share your tactical wins</p>
+               </div>
+               <form onSubmit={handleAddAchievement} className="space-y-4">
+                  <input 
+                    required
+                    value={newTitle}
+                    onChange={e => setNewTitle(e.target.value)}
+                    placeholder="Achievement Title (e.g. Mastered React)"
+                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-4 px-6 text-[11px] font-bold text-[#0F172A] focus:border-blue-600 outline-none transition-all"
+                  />
+                  <textarea 
+                    value={newDesc}
+                    onChange={e => setNewDesc(e.target.value)}
+                    placeholder="Brief description of the success node..."
+                    rows={3}
+                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-4 px-6 text-[11px] font-bold text-[#0F172A] focus:border-blue-600 outline-none transition-all resize-none"
+                  />
+                  <button 
+                    disabled={isSubmitting}
+                    className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-[9px] tracking-[0.3em] uppercase shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all disabled:opacity-50"
+                  >
+                    {isSubmitting ? "Transmitting..." : "Broadcast Achievement"}
+                  </button>
+               </form>
+            </div>
+
+            {/* Submissions List */}
+            <div className="lg:col-span-2 space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+               {userAchievements.map((ach, i) => (
+                 <motion.div 
+                   key={i}
+                   initial={{ opacity: 0, x: 20 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   className="bg-white rounded-[32px] p-6 border border-[#F1F5F9] flex items-center justify-between group hover:shadow-lg transition-all"
+                 >
+                    <div className="flex items-center gap-4">
+                       <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+                          <Award size={24} />
+                       </div>
+                       <div>
+                          <p className="text-xs font-black text-[#0F172A] uppercase tracking-tight">{ach.title}</p>
+                          <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest mt-0.5">{ach.user_name} · {new Date(ach.created_at).toLocaleDateString()}</p>
+                       </div>
+                    </div>
+                    <div className="text-right">
+                       <p className="text-[9px] font-medium text-slate-500 max-w-[200px] italic line-clamp-1">"{ach.description}"</p>
+                    </div>
+                 </motion.div>
+               ))}
+               {userAchievements.length === 0 && (
+                 <div className="py-20 text-center opacity-20">
+                    <Sparkles size={48} className="mx-auto mb-4" />
+                    <p className="text-xs font-black uppercase tracking-widest">Awaiting First Community Milestone</p>
+                 </div>
+               )}
+            </div>
          </div>
       </section>
 
