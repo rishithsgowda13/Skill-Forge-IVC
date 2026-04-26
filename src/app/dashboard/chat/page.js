@@ -33,16 +33,25 @@ export default function CommunicationHub() {
   }, []);
 
   async function loadData() {
-    const cookies = document.cookie.split(';');
-    const sessionCookie = cookies.find(c => c.trim().startsWith('mock_session='));
-    let email = "";
-    if (sessionCookie) {
-      email = sessionCookie.split('=')[1].split(':')[1];
+    const { data: { user } } = await supabase.auth.getUser();
+    let email = user?.email || "";
+
+    if (!email) {
+      const cookies = document.cookie.split(';');
+      const sessionCookie = cookies.find(c => c.trim().startsWith('mock_session='));
+      if (sessionCookie) {
+        email = sessionCookie.split('=')[1].split(':')[1];
+      }
+    }
+
+    if (!email) {
+      setLoading(false);
+      return;
     }
 
     // Fetch Profile
     const { data: prof } = await supabase.from('member_registry').select('*').eq('email', email).single();
-    setProfile(prof);
+    setProfile(prof || { email, full_name: email.split('@')[0], role: 'candidate' });
 
     // Fetch Projects
     const { data: projData } = await supabase.from('projects').select('*');
@@ -145,6 +154,24 @@ export default function CommunicationHub() {
                 <div className="bg-white rounded-[50px] h-[600px] border border-[#E2E8F0] flex flex-col items-center justify-center space-y-4">
                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Establishing Neural Link...</p>
+                </div>
+             ) : !profile?.email ? (
+                <div className="bg-white rounded-[50px] h-[600px] border border-[#E2E8F0] flex flex-col items-center justify-center space-y-8 text-center p-20">
+                   <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-[40px] flex items-center justify-center shadow-xl shadow-rose-100">
+                      <ShieldAlert size={48} />
+                   </div>
+                   <div className="space-y-2">
+                      <h3 className="text-2xl font-black text-[#0F172A] uppercase tracking-tighter">Neural Identity Required</h3>
+                      <p className="text-sm font-medium text-[#94A3B8] leading-relaxed max-w-sm">
+                         Your identity node is currently offline. Establish a valid session to initialize the Communication Hub.
+                      </p>
+                   </div>
+                   <button 
+                     onClick={() => window.location.reload()}
+                     className="bg-[#0F172A] text-white px-10 py-5 rounded-2xl font-black text-[10px] tracking-[0.3em] uppercase shadow-2xl shadow-slate-200 hover:bg-slate-800 transition-all"
+                   >
+                      Re-Establish Connection
+                   </button>
                 </div>
              ) : (
                 <ProjectChat 

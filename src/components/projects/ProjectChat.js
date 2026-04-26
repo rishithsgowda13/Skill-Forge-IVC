@@ -61,10 +61,19 @@ export default function ProjectChat({ projectId, userEmail, userName, isMentor =
       sender_name: userName || "Anonymous Node",
       content: newMessage.trim()
     };
+
+    if (!userEmail) {
+      alert("Neural Identity Not Found. Please re-sync your link.");
+      return;
+    }
+
     if (!isGlobal) message.project_id = projectId;
 
     const { error } = await supabase.from(tableName).insert([message]);
-    if (!error) {
+    if (error) {
+      console.error("Tactical Transmission Failure:", error.message, error.details);
+      alert(`Transmission Error: ${error.message}. Ensure database tables and policies are initialized.`);
+    } else {
       setNewMessage("");
     }
   };
