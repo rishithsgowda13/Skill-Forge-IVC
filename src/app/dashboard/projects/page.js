@@ -203,10 +203,18 @@ export default function CandidateProjectsPage() {
                                   {isCompleted ? 'Post-Execution' : isActive ? 'Operational' : 'Standby'}
                                </span>
                             </div>
+                            {isActive && (
+                               <div className="pt-4 flex items-center gap-4 text-blue-600">
+                                  <div className="flex-1 h-1.5 bg-blue-50 rounded-full overflow-hidden">
+                                     <motion.div initial={{ width: 0 }} animate={{ width: '40%' }} className="h-full bg-blue-600" />
+                                  </div>
+                                  <span className="text-[10px] font-black uppercase tracking-widest">Active Execution</span>
+                               </div>
+                            )}
                           </div>
                        </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {(!selectedProject.phases || selectedProject.phases.length === 0) && (
                      <div className="pl-12 py-6">
                         <p className="text-[10px] font-black text-[#CBD5E1] uppercase tracking-widest italic">No detailed phases defined by project lead</p>
