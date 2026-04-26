@@ -76,12 +76,12 @@ export default function CommunicationHub() {
                      className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${activeTab === 'global' ? 'bg-blue-600 text-white shadow-xl shadow-blue-100' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
                    >
                       <Globe size={18} />
-                      <span className="text-xs font-black uppercase tracking-tight">SkillForge Global</span>
+                      <span className="text-xs font-black uppercase tracking-tight">Club Chat</span>
                    </button>
                 </div>
 
                 <div className="space-y-4">
-                   <h3 className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em]">Initiative Nodes</h3>
+                   <h3 className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em]">My Group Chats</h3>
                    <div className="space-y-2">
                       {projects.map(p => (
                         <button 
@@ -90,12 +90,12 @@ export default function CommunicationHub() {
                           className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all text-left ${selectedProject?.id === p.id ? 'bg-blue-600 text-white shadow-xl shadow-blue-100' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
                         >
                            <Hash size={18} />
-                           <span className="text-[10px] font-black uppercase tracking-tighter truncate">{p.title}</span>
+                           <span className="text-[10px] font-black uppercase tracking-tighter truncate">{p.title} Chat</span>
                         </button>
                       ))}
                       {projects.length === 0 && (
-                        <div className="py-6 text-center opacity-30 italic text-[10px] font-bold text-slate-400">
-                          No project nodes active
+                        <div className="py-6 text-center opacity-30 italic text-[10px] font-bold text-slate-400 border border-dashed border-slate-200 rounded-2xl px-4">
+                          No project groups assigned yet
                         </div>
                       )}
                    </div>

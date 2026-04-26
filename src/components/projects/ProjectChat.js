@@ -76,10 +76,10 @@ export default function ProjectChat({ projectId, userEmail, userName, isMentor =
           {isGlobal ? <Globe size={18} className="text-blue-600" /> : <Hash size={18} className="text-blue-600" />}
           <div>
             <h3 className="text-sm font-black text-[#0F172A] uppercase tracking-tighter">
-              {isGlobal ? "SkillForge Global Network" : projectTitle}
+              {isGlobal ? "SkillForge Club Chat" : `${projectTitle} Chat`}
             </h3>
             <p className="text-[8px] font-black text-[#94A3B8] uppercase tracking-[0.2em] mt-0.5">
-              {isGlobal ? "Public Node Sync" : "Restricted Strike Team Protocol"}
+              {isGlobal ? "Global Node Sync" : "Restricted Strike Team Protocol"}
             </p>
           </div>
         </div>
