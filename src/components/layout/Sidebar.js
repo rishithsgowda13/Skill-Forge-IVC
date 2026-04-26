@@ -18,7 +18,9 @@ import {
   BookOpen,
   UserCheck,
   Star,
-  LayoutGrid
+  LayoutGrid,
+  ShieldAlert,
+  MessageSquare
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
