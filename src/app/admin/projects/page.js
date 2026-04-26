@@ -77,6 +77,7 @@ export default function AdminProjectsPage() {
       end_date: formData.get('end_date'),
       phases: phases.filter(p => p.title),
       team: [], // Initial empty team
+      mentor_email: formData.get('mentor_email'),
       status: 'active',
     };
 
@@ -98,7 +99,8 @@ export default function AdminProjectsPage() {
         description: newProject.description, 
         status: newProject.status,
         start_date: newProject.start_date,
-        end_date: newProject.end_date
+        end_date: newProject.end_date,
+        mentor_email: newProject.mentor_email
       };
       
       const { data: fallbackData, error: fallbackError } = await supabase
@@ -137,6 +139,18 @@ export default function AdminProjectsPage() {
     } else {
       console.error("Team update error:", error.message);
       alert(`Nexus Error: ${error.message}. \n\nThis likely means the 'team' column is missing in your 'projects' table.`);
+    }
+  };
+
+  const handleUpdateMentor = async (project, mentorEmail) => {
+    const { error } = await supabase
+      .from('projects')
+      .update({ mentor_email: mentorEmail })
+      .eq('id', project.id);
+
+    if (!error) {
+      setProjects(projects.map(p => p.id === project.id ? { ...p, mentor_email: mentorEmail } : p));
+      setSelectedProject({ ...project, mentor_email: mentorEmail });
     }
   };
 
@@ -388,7 +402,20 @@ export default function AdminProjectsPage() {
                         className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-5 px-8 text-sm font-bold text-[#0F172A] focus:outline-none focus:border-blue-600 transition-all shadow-inner"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em] ml-2">Assigned Master Mentor</label>
+                          <select 
+                            name="mentor_email"
+                            className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-[24px] py-5 px-8 text-[11px] font-black text-[#0F172A] focus:border-blue-600 outline-none transition-all appearance-none"
+                          >
+                             <option value="">Select Mentor Protocol</option>
+                             {allMembers.map(m => (
+                                <option key={m.email} value={m.email}>{m.full_name}</option>
+                             ))}
+                          </select>
+                       </div>
+
+                       <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">Launch</label>
                         <input name="start_date" type="date" required className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-5 px-5 text-[10px] font-bold text-[#0F172A] focus:outline-none focus:border-blue-600 shadow-inner" />
@@ -525,8 +552,26 @@ export default function AdminProjectsPage() {
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
                             className="absolute right-0 mt-3 w-72 bg-white rounded-3xl shadow-2xl border border-[#E2E8F0] z-50 overflow-hidden"
                           >
-                            <div className="p-4 border-b border-[#F1F5F9]">
-                              <div className="bg-slate-50 rounded-xl px-3 py-2 flex items-center gap-2 border border-[#F1F5F9]">
+                           <div className="space-y-4 pt-4 border-t border-[#F1F5F9] px-4">
+                              <div className="flex items-center justify-between">
+                                 <h4 className="text-[10px] font-black text-[#0F172A] uppercase tracking-widest">Master Mentor</h4>
+                              </div>
+                              <div className="space-y-3">
+                                 <select 
+                                   value={selectedProject.mentor_email || ""}
+                                   onChange={(e) => handleUpdateMentor(selectedProject, e.target.value)}
+                                   className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-4 px-6 text-[11px] font-bold text-[#0F172A] focus:border-blue-600 outline-none transition-all"
+                                 >
+                                    <option value="">No Mentor Assigned</option>
+                                    {allMembers.filter(m => true).map(m => (
+                                       <option key={m.email} value={m.email}>{m.full_name} ({m.email})</option>
+                                    ))}
+                                 </select>
+                              </div>
+                           </div>
+
+                           <div className="space-y-4 pt-4 border-t border-[#F1F5F9]">
+                              <div className="bg-slate-50 rounded-xl px-3 py-2 flex items-center gap-2 border border-[#F1F5F9] mx-4">
                                 <Search size={14} className="text-slate-400" />
                                 <input 
                                   autoFocus

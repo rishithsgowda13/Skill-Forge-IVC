@@ -22,6 +22,12 @@ export default function CommunicationHub() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const getArray = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    try { return JSON.parse(val); } catch { return []; }
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -38,15 +44,25 @@ export default function CommunicationHub() {
     const { data: prof } = await supabase.from('member_registry').select('*').eq('email', email).single();
     setProfile(prof);
 
-    // Fetch User Projects
+    // Fetch Projects
     const { data: projData } = await supabase.from('projects').select('*');
-    const myProjs = (projData || []).filter(p => {
-      try {
-        const team = Array.isArray(p.team) ? p.team : (typeof p.team === 'string' ? JSON.parse(p.team) : []);
-        return team.some(m => m.email === email);
-      } catch { return false; }
-    });
-    setProjects(myProjs);
+    
+    // Admins see all project chats for oversight
+    if (prof?.role === 'admin') {
+      setProjects(projData || []);
+    } else {
+      // Filter for User as Member or Mentor
+      const myProjs = (projData || []).filter(p => {
+        const isMentor = p.mentor_email === email;
+        const team = getArray(p.team);
+        const isMember = team.some(m => {
+          const mEmail = typeof m === 'object' ? m.email : m;
+          return mEmail === email;
+        });
+        return isMentor || isMember;
+      });
+      setProjects(myProjs);
+    }
     setLoading(false);
   }
 
@@ -94,8 +110,20 @@ export default function CommunicationHub() {
                         </button>
                       ))}
                       {projects.length === 0 && (
-                        <div className="py-6 text-center opacity-30 italic text-[10px] font-bold text-slate-400 border border-dashed border-slate-200 rounded-2xl px-4">
-                          No project groups assigned yet
+                        <div className="py-8 text-center space-y-4 border border-dashed border-slate-200 rounded-3xl px-6 bg-slate-50/50">
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Link Status: Offline</p>
+                            <p className="text-[9px] font-bold text-slate-300 uppercase truncate">ID: {profile?.email || "Unknown"}</p>
+                          </div>
+                          <p className="text-[10px] font-medium text-slate-400 leading-relaxed italic">
+                            No initiative nodes assigned to this ID. Verify registry in Admin Console.
+                          </p>
+                          <button 
+                            onClick={loadData}
+                            className="text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline"
+                          >
+                            Sync Neural Link
+                          </button>
                         </div>
                       )}
                    </div>
