@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, MessageSquare, ShieldCheck, User, Globe } from "lucide-react";
+import { Send, MessageSquare, ShieldCheck, User, Globe, Hash } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
-export default function ProjectChat({ projectId, userEmail, userName, isMentor = false }) {
+export default function ProjectChat({ projectId, userEmail, userName, isMentor = false, projectTitle = "" }) {
   const supabase = createClient();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -73,13 +73,13 @@ export default function ProjectChat({ projectId, userEmail, userName, isMentor =
     <div className="bg-white rounded-[40px] border border-[#E2E8F0] shadow-sm flex flex-col h-[600px] overflow-hidden">
       <div className="p-8 border-b border-[#F1F5F9] flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {isGlobal ? <Globe size={18} className="text-blue-600" /> : <MessageSquare size={18} className="text-blue-600" />}
+          {isGlobal ? <Globe size={18} className="text-blue-600" /> : <Hash size={18} className="text-blue-600" />}
           <div>
             <h3 className="text-sm font-black text-[#0F172A] uppercase tracking-tighter">
-              {isGlobal ? "SkillForge Global Broadcast" : "Neural Communication"}
+              {isGlobal ? "SkillForge Global Network" : projectTitle}
             </h3>
             <p className="text-[8px] font-black text-[#94A3B8] uppercase tracking-[0.2em] mt-0.5">
-              {isGlobal ? "Public Node Sync" : "Encrypted Team Protocol"}
+              {isGlobal ? "Public Node Sync" : "Restricted Strike Team Protocol"}
             </p>
           </div>
         </div>

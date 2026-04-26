@@ -121,6 +121,7 @@ export default function CommunicationHub() {
              ) : (
                 <ProjectChat 
                    projectId={activeTab === 'global' ? 'global' : selectedProject?.id}
+                   projectTitle={selectedProject?.title}
                    userEmail={profile?.email}
                    userName={profile?.full_name}
                    isMentor={profile?.role === 'mentor' || profile?.role === 'admin'}
