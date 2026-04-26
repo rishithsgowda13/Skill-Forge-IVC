@@ -73,6 +73,7 @@ export default function Sidebar() {
 
   const adminItems = [
     { href: "/admin", label: "Control Center", icon: LayoutDashboard },
+    { href: "/dashboard/chat", label: "Neural Monitoring", icon: MessageSquare },
     { href: "/admin/profiles", label: "Member Profiles", icon: LayoutGrid },
     { href: "/admin/projects", label: "Project Nexus", icon: Activity },
     { href: "/admin/roles", label: "Role Nexus", icon: ShieldCheck },
@@ -82,6 +83,7 @@ export default function Sidebar() {
 
   const mentorItems = [
     { href: "/mentor", label: "Mentor Center", icon: LayoutDashboard },
+    { href: "/dashboard/chat", label: "Node Communication", icon: MessageSquare },
     { href: "/mentor/projects", label: "Project Oversight", icon: Activity },
   ];
 
