@@ -25,27 +25,56 @@ export default function CandidateInterviewPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        let { data: { user } } = await supabase.auth.getUser();
+        
+        let userEmail = user?.email;
+        let userId = user?.id;
+
         if (!user) {
-          router.push("/auth");
+          const cookies = document.cookie.split(';');
+          const sessionCookie = cookies.find(c => c.trim().startsWith('mock_session='));
+          if (sessionCookie) {
+            const val = sessionCookie.split('=')[1];
+            const [role, id] = val.split(':');
+            if (id && id.includes('@')) {
+              userEmail = id;
+            } else {
+              userEmail = id; // Sometimes id is just a string, but let's allow it
+            }
+          }
+        }
+
+        if (!userEmail && !userId) {
+          router.push("/login");
           return;
         }
 
-        // Fetch from profiles first, then check registry
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
+        let prof = null;
+        
+        if (userId) {
+          const { data } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", userId)
+            .single();
+          prof = data;
+        } else if (userEmail) {
+          const { data } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("email", userEmail)
+            .single();
+          prof = data;
+        }
         
         if (prof) {
           setProfile(prof);
-        } else {
-          // Fallback to registry by email if needed
+        } else if (userEmail) {
+          // Fallback to registry
           const { data: regProf } = await supabase
             .from("member_registry")
             .select("*")
-            .eq("email", user.email)
+            .eq("email", userEmail)
             .single();
           setProfile(regProf);
         }
