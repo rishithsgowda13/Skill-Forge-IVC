@@ -62,28 +62,23 @@ export default function CandidateInterviewPage() {
     );
   }
 
-  if (!profile || profile.round2_status !== "selected_round3") {
+  if (!profile) {
     return (
       <div className="p-8 md:p-14 flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
         <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
           <ShieldCheck size={40} />
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-black text-[#0F172A] uppercase tracking-tighter">Access Restricted</h2>
+          <h2 className="text-2xl font-black text-[#0F172A] uppercase tracking-tighter">Profile Not Found</h2>
           <p className="text-sm font-bold text-[#64748B] max-w-md">
-            This terminal is reserved for candidates advanced to Phase III (Personal Interview). 
-            Your current protocol status does not grant access to this node.
+            We could not synchronize your identity protocol. Please contact administration.
           </p>
         </div>
-        <button 
-          onClick={() => router.push("/dashboard")}
-          className="px-8 py-3 bg-[#0F172A] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
-        >
-          Return to Dashboard
-        </button>
       </div>
     );
   }
+
+  const isAdvanced = profile.round2_status === "selected_round3";
 
   let skills = [];
   try {
@@ -109,11 +104,18 @@ export default function CandidateInterviewPage() {
             </div>
           </div>
           <h1 className="text-4xl font-black text-[#0F172A] tracking-tighter uppercase leading-none">
-            Skill <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Profiling</span>
+            Skill <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Profile</span>
           </h1>
-          <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.4em] mt-2">
-            Assessment Results · Competency Map · Performance Metrics
-          </p>
+          <div className="flex flex-col gap-2 mt-2">
+            <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.4em]">
+              Assessment Results · Competency Map · Performance Metrics
+            </p>
+            {!isAdvanced && (
+              <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-2">
+                <AlertCircle size={12} /> Awaiting advancement to Phase III for detailed profiling
+              </p>
+            )}
+          </div>
         </div>
         
         <div className={`flex items-center gap-4 px-6 py-4 rounded-[28px] border-2 shadow-xl ${

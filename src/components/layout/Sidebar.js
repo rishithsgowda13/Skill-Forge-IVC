@@ -104,11 +104,8 @@ export default function Sidebar() {
     { href: "/dashboard/projects", label: "My Assignments", icon: Activity },
     { href: "/dashboard/achievements", label: "Achievements", icon: Trophy },
     { href: "/dashboard/research", label: "Skill Forge", icon: BookOpen },
+    { href: "/dashboard/interview", label: "Skill Profile", icon: Star },
   ];
-
-  if (round2Status === "selected_round3") {
-    candidateItems.push({ href: "/dashboard/interview", label: "Skill Profiling", icon: Star });
-  }
 
   const isAdmin = role === "admin" || role === "evaluator";
   const isMentor = role === "mentor";
