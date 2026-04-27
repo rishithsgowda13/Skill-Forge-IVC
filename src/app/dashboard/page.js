@@ -42,35 +42,72 @@ export default function DashboardPage() {
     setIsMounted(true);
     
     async function loadData() {
-      // Get User Email
-      const cookies = document.cookie.split(';');
-      const sessionCookie = cookies.find(c => c.trim().startsWith('mock_session='));
-      let email = "";
-      if (sessionCookie) {
-        email = sessionCookie.split('=')[1].split(':')[1];
+      try {
+        let { data: { user } } = await supabase.auth.getUser();
+        let userEmail = user?.email;
+        let userId = user?.id;
+
+        if (!user) {
+          const cookies = document.cookie.split(';');
+          const sessionCookie = cookies.find(c => c.trim().startsWith('mock_session='));
+          if (sessionCookie) {
+            const val = sessionCookie.split('=')[1];
+            const [r, id] = val.split(':');
+            if (id && id.includes('@')) {
+              userEmail = id;
+            } else {
+              userEmail = id;
+            }
+          }
+        }
+
+        if (!userEmail && !userId) {
+          router.push("/login");
+          return;
+        }
+
+        let prof = null;
+        
+        if (userId) {
+          const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
+          prof = data;
+        } else if (userEmail) {
+          const { data } = await supabase.from("profiles").select("*").eq("email", userEmail).single();
+          prof = data;
+        }
+        
+        if (!prof && userEmail) {
+          const { data: regProf } = await supabase.from("member_registry").select("*").eq("email", userEmail).single();
+          prof = regProf;
+        } else if (prof && userEmail && !prof.full_name) {
+           const { data: regProf } = await supabase.from("member_registry").select("full_name").eq("email", userEmail).single();
+           if (regProf) prof.full_name = regProf.full_name;
+        }
+
+        setProfile(prof);
+
+        // Fetch All Active Projects
+        const { data: allProj } = await supabase.from('projects').select('*').eq('status', 'active');
+        setTotalActiveProjCount(allProj?.length || 0);
+
+        // Fetch My Projects
+        if (userEmail) {
+          const myProjs = (allProj || []).filter(p => {
+            try {
+              const team = Array.isArray(p.team) ? p.team : (typeof p.team === 'string' ? JSON.parse(p.team) : []);
+              return team.some(m => m.email === userEmail);
+            } catch { return false; }
+          });
+          setActiveProjCount(myProjs.length);
+        }
+      } catch (err) {
+        console.error("Dashboard data sync failed:", err);
+      } finally {
+        setLoading(false);
       }
-
-      // Fetch Profile
-      const { data: prof } = await supabase.from('member_registry').select('*').eq('email', email).single();
-      setProfile(prof);
-
-      // Fetch All Active Projects
-      const { data: allProj } = await supabase.from('projects').select('*').eq('status', 'active');
-      setTotalActiveProjCount(allProj?.length || 0);
-
-      // Fetch My Projects
-      if (email) {
-        const myProjs = (allProj || []).filter(p => {
-          try {
-            const team = Array.isArray(p.team) ? p.team : (typeof p.team === 'string' ? JSON.parse(p.team) : []);
-            return team.some(m => m.email === email);
-          } catch { return false; }
-        });
-        setActiveProjCount(myProjs.length);
-      }
-
-      setLoading(false);
     }
+
+
     loadData();
   }, []);
 
