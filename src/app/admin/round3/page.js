@@ -76,25 +76,19 @@ export default function Round3SelectionPage() {
     setLoading(false);
   }
 
-  async function toggleSelection(userId, currentStatus) {
+  async function selectForInterview(userId) {
     setSelectingId(userId);
-    const newStatus = currentStatus === "selected_round3" ? "submitted" : "selected_round3";
     
     const { error } = await supabase
       .from("profiles")
-      .update({ round2_status: newStatus })
+      .update({ round2_status: "selected_round3" })
       .eq("id", userId);
 
     if (error) {
-      showToast("Failed to update candidate status.", "error");
+      showToast("Failed to advance candidate.", "error");
     } else {
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, round2_status: newStatus } : u));
-      showToast(
-        newStatus === "selected_round3" 
-          ? "Candidate advanced to Personal Interview." 
-          : "Candidate removed from interview pool.",
-        newStatus === "selected_round3" ? "success" : "info"
-      );
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, round2_status: "selected_round3" } : u));
+      showToast("Candidate advanced to Personal Interview.", "success");
     }
     setSelectingId(null);
   }
@@ -334,11 +328,11 @@ export default function Round3SelectionPage() {
 
                   {/* Action Button */}
                   <button
-                    onClick={() => toggleSelection(user.id, user.round2_status)}
-                    disabled={selectingId === user.id}
+                    onClick={() => selectForInterview(user.id)}
+                    disabled={selectingId === user.id || isSelected}
                     className={`w-full py-3 rounded-xl font-black text-[10px] tracking-[0.2em] uppercase transition-all flex items-center justify-center gap-2 active:scale-[0.97] ${
                       isSelected 
-                        ? "bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100" 
+                        ? "bg-emerald-50 text-emerald-600 border border-emerald-100 cursor-default" 
                         : "bg-violet-600 text-white hover:bg-violet-700 shadow-lg shadow-violet-100"
                     }`}
                   >
@@ -346,8 +340,8 @@ export default function Round3SelectionPage() {
                       <Loader2 size={14} className="animate-spin" />
                     ) : isSelected ? (
                       <>
-                        <UserX size={14} />
-                        <span>Remove from Interview</span>
+                        <CheckCircle2 size={14} />
+                        <span>Selected for Interview</span>
                       </>
                     ) : (
                       <>
