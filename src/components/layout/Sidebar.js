@@ -36,15 +36,17 @@ export default function Sidebar() {
   const [role, setRole] = useState("user");
   const [userName, setUserName] = useState("");
   const [isMounted, setIsMounted] = useState(false);
+  const [round2Status, setRound2Status] = useState(null);
 
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: profile } = await supabase.from("profiles").select("full_name, role").eq("id", user.id).single();
+        const { data: profile } = await supabase.from("profiles").select("full_name, role, round2_status").eq("id", user.id).single();
         if (profile) {
           setUserName(profile.full_name);
           if (profile.role) setRole(profile.role);
+          setRound2Status(profile.round2_status);
         }
       }
       
@@ -55,6 +57,12 @@ export default function Sidebar() {
         const [r, id] = val.split(':');
         setRole(r || "user");
         if (id) setUserName(`can ${id}`);
+        
+        // Also fetch status for mock session if possible
+        if (r === "candidate" || r === "user") {
+           const { data: prof } = await supabase.from("profiles").select("round2_status").eq("email", id).single();
+           if (prof) setRound2Status(prof.round2_status);
+        }
       }
       setIsMounted(true);
     }
@@ -97,6 +105,10 @@ export default function Sidebar() {
     { href: "/dashboard/achievements", label: "Achievements", icon: Trophy },
     { href: "/dashboard/research", label: "Skill Forge", icon: BookOpen },
   ];
+
+  if (round2Status === "selected_round3") {
+    candidateItems.push({ href: "/dashboard/interview", label: "Skill Profiling", icon: Star });
+  }
 
   const isAdmin = role === "admin" || role === "evaluator";
   const isMentor = role === "mentor";
