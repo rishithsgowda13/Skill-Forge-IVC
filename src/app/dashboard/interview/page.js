@@ -24,31 +24,36 @@ export default function CandidateInterviewPage() {
 
   useEffect(() => {
     async function loadData() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/auth");
-        return;
-      }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          router.push("/auth");
+          return;
+        }
 
-      // Fetch from profiles first, then check registry
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      
-      if (prof) {
-        setProfile(prof);
-      } else {
-        // Fallback to registry by email if needed
-        const { data: regProf } = await supabase
-          .from("member_registry")
+        // Fetch from profiles first, then check registry
+        const { data: prof } = await supabase
+          .from("profiles")
           .select("*")
-          .eq("email", user.email)
+          .eq("id", user.id)
           .single();
-        setProfile(regProf);
+        
+        if (prof) {
+          setProfile(prof);
+        } else {
+          // Fallback to registry by email if needed
+          const { data: regProf } = await supabase
+            .from("member_registry")
+            .select("*")
+            .eq("email", user.email)
+            .single();
+          setProfile(regProf);
+        }
+      } catch (err) {
+        console.error("Critical sync failure in interview node:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     loadData();
   }, []);
