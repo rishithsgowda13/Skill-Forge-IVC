@@ -8,7 +8,10 @@ import {
   Zap, 
   Activity,
   LogOut,
-  BookOpen
+  BookOpen,
+  MessageSquare,
+  Star,
+  LayoutGrid
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -31,23 +34,28 @@ export default function MobileNav() {
   const isAdmin = role === "admin" || role === "evaluator";
 
   const adminItems = [
-    { href: "/quiz/admin", label: "Control", icon: LayoutDashboard },
-    { href: "/quiz/admin/quizzes", label: "Protocols", icon: FileText },
-    { href: "/quiz/admin/users", label: "Registry", icon: Users },
+    { href: "/admin", label: "Control", icon: LayoutDashboard },
+    { href: "/dashboard/chat", label: "Comms", icon: MessageSquare },
+    { href: "/admin/round3", label: "Select", icon: Users },
+    { href: "/admin/interview", label: "Interview", icon: Star },
+    { href: "/admin/profiles", label: "Profiles", icon: LayoutGrid },
+  ];
+
+  const mentorItems = [
+    { href: "/mentor", label: "Mentor", icon: LayoutDashboard },
+    { href: "/dashboard/chat", label: "Comms", icon: MessageSquare },
+    { href: "/mentor/projects", label: "Projects", icon: Activity },
   ];
 
   const candidateItems = [
     { href: "/dashboard", label: "Nexus", icon: LayoutDashboard },
-    { href: "/quiz/access", label: "Protocol", icon: Zap },
-    { href: "/dashboard/research", label: "Research", icon: BookOpen },
-    { href: "/", label: "Logout", icon: LogOut, action: async () => {
-      document.cookie = "mock_session=; path=/; max-age=0;";
-      await supabase.auth.signOut();
-      router.push("/");
-    }},
+    { href: "/dashboard/chat", label: "Comms", icon: MessageSquare },
+    { href: "/dashboard/projects", label: "Projects", icon: Activity },
+    { href: "/dashboard/research", label: "Forge", icon: BookOpen },
+    { href: "/dashboard/interview", label: "Profile", icon: Star },
   ];
 
-  const navItems = isAdmin ? adminItems : candidateItems;
+  const navItems = isAdmin ? adminItems : (role === "mentor" ? mentorItems : candidateItems);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-[#F1F5F9] px-4 py-3 flex items-center justify-between z-[100] lg:hidden safe-area-bottom shadow-[0_-15px_40px_rgba(0,0,0,0.05)] rounded-t-[24px]">
