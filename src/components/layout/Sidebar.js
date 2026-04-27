@@ -74,6 +74,9 @@ export default function Sidebar() {
   const adminItems = [
     { href: "/admin", label: "Control Center", icon: LayoutDashboard },
     { href: "/dashboard/chat", label: "Neural Monitoring", icon: MessageSquare },
+    { href: "/admin/round2", label: "Round 2 Selection", icon: BookOpen },
+    { href: "/admin/round3", label: "Round 3 Selection", icon: UserCheck },
+    { href: "/admin/interview", label: "Interview Panel", icon: Star },
     { href: "/admin/profiles", label: "Member Profiles", icon: LayoutGrid },
     { href: "/admin/projects", label: "Project Nexus", icon: Activity },
     { href: "/admin/roles", label: "Role Nexus", icon: ShieldCheck },
