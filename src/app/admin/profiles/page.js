@@ -794,16 +794,29 @@ function ProfileCard({ candidate, onSave, onDelete }) {
                           ))}
                         </div>
                       </div>
-                    ) : (
-                      skills.map((s) => (
-                        <div key={s.skill} className="flex items-center justify-between py-1">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: DOMAIN_SVG_COLORS[findDomain(s)] || "#94A3B8" }} />
-                            <span className="text-[11px] font-bold text-[#0F172A] truncate">{s.skill}</span>
-                          </div>
-                          <StarBadge rating={s.rating} />
+                    ) : skills.length > 0 ? (
+                      <div className="flex flex-col md:flex-row gap-6 items-start">
+                        <div className="w-full md:w-1/2 flex justify-center py-4 bg-[#F8FAFC] rounded-2xl border border-[#F1F5F9]">
+                           <RadarChart skills={skills} size={220} showLabels={true} showDots={true} />
                         </div>
-                      ))
+                        <div className="w-full md:w-1/2 space-y-1">
+                          <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-wider mb-3">Skill Assessment</p>
+                          {skills.map((s) => (
+                            <div key={s.skill} className="flex items-center justify-between py-1.5 border-b border-[#F8FAFC] last:border-none">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: DOMAIN_SVG_COLORS[findDomain(s)] || "#94A3B8" }} />
+                                <span className="text-xs font-bold text-[#0F172A] truncate">{s.skill}</span>
+                              </div>
+                              <StarBadge rating={s.rating} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center bg-[#F8FAFC] rounded-2xl border border-dashed border-[#E2E8F0]">
+                        <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">No Competencies Mapped</p>
+                        <p className="text-[9px] font-bold text-[#CBD5E1] mt-1">Use the Interview Panel or Edit tool to assess</p>
+                      </div>
                     )}
                   </div>
                 ) : expanded === 'projects' ? (
@@ -897,13 +910,22 @@ export default function AdminProfilesPage() {
         ...(regData || []).map(r => ({ ...r, is_registry: true }))
       ].sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
 
-      const withRatedSkills = combined.filter((c) => {
-        try {
-          const parsed = typeof c.skill_profile === "string" ? JSON.parse(c.skill_profile) : c.skill_profile;
-          return Array.isArray(parsed) && parsed.some((s) => s.skill && s.rating > 0);
-        } catch { return false; }
+      const uniqueMap = new Map();
+      combined.forEach(c => {
+        if (!c.email) return;
+        const key = c.email.toLowerCase();
+        if (uniqueMap.has(key)) {
+           const existing = uniqueMap.get(key);
+           if (!existing.skill_profile && c.skill_profile) {
+              uniqueMap.set(key, c);
+           }
+        } else {
+           uniqueMap.set(key, c);
+        }
       });
-      setCandidates(withRatedSkills);
+      const uniqueCombined = Array.from(uniqueMap.values());
+
+      setCandidates(uniqueCombined);
       setLoading(false);
     }
     checkAndLoad();

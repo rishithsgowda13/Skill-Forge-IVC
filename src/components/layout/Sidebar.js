@@ -36,27 +36,43 @@ export default function Sidebar() {
   const [role, setRole] = useState("user");
   const [userName, setUserName] = useState("");
   const [isMounted, setIsMounted] = useState(false);
+  const [round2Status, setRound2Status] = useState(null);
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase.from("profiles").select("full_name, role").eq("id", user.id).single();
-        if (profile) {
-          setUserName(profile.full_name);
-          if (profile.role) setRole(profile.role);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase.from("profiles").select("full_name, role, round2_status").eq("id", user.id).single();
+          if (profile) {
+            setUserName(profile.full_name);
+            if (profile.role) setRole(profile.role);
+            setRound2Status(profile.round2_status);
+          }
         }
+        
+        const cookies = document.cookie.split(';');
+        const sessionCookie = cookies.find(c => c.trim().startsWith('mock_session='));
+        if (sessionCookie) {
+          const val = sessionCookie.split('=')[1];
+          const [r, id] = val.split(':');
+          setRole(r || "user");
+          if (id) setUserName(id.includes('@') ? id.split('@')[0] : `can ${id}`);
+          
+          if ((r === "candidate" || r === "user") && id.includes('@')) {
+             try {
+               const { data: prof } = await supabase.from("profiles").select("round2_status").eq("email", id).single();
+               if (prof) setRound2Status(prof.round2_status);
+             } catch (e) {
+               console.error("Mock status sync failed:", e);
+             }
+          }
+        }
+      } catch (err) {
+        console.error("Sidebar initialization protocol error:", err);
+      } finally {
+        setIsMounted(true);
       }
-      
-      const cookies = document.cookie.split(';');
-      const sessionCookie = cookies.find(c => c.trim().startsWith('mock_session='));
-      if (sessionCookie) {
-        const val = sessionCookie.split('=')[1];
-        const [r, id] = val.split(':');
-        setRole(r || "user");
-        if (id) setUserName(`can ${id}`);
-      }
-      setIsMounted(true);
     }
     init();
   }, []);
@@ -96,6 +112,7 @@ export default function Sidebar() {
     { href: "/dashboard/projects", label: "My Assignments", icon: Activity },
     { href: "/dashboard/achievements", label: "Achievements", icon: Trophy },
     { href: "/dashboard/research", label: "Skill Forge", icon: BookOpen },
+    { href: "/dashboard/interview", label: "Skill Profile", icon: Star },
   ];
 
   const isAdmin = role === "admin" || role === "evaluator";

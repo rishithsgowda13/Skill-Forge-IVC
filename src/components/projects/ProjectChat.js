@@ -79,7 +79,7 @@ export default function ProjectChat({ projectId, userEmail, userName, isMentor =
   };
 
   return (
-    <div className="bg-white rounded-[40px] border border-[#E2E8F0] shadow-sm flex flex-col h-[600px] overflow-hidden">
+    <div className="bg-white rounded-[40px] border border-[#E2E8F0] shadow-sm flex flex-col h-[65vh] lg:h-[600px] min-h-[400px] overflow-hidden">
       <div className="p-8 border-b border-[#F1F5F9] flex items-center justify-between">
         <div className="flex items-center gap-3">
           {isGlobal ? <Globe size={18} className="text-blue-600" /> : <Hash size={18} className="text-blue-600" />}
