@@ -76,12 +76,26 @@ export default function DashboardPage() {
           prof = data;
         }
         
-        if (!prof && userEmail) {
+        if (userEmail) {
           const { data: regProf } = await supabase.from("member_registry").select("*").eq("email", userEmail).single();
-          prof = regProf;
-        } else if (prof && userEmail && !prof.full_name) {
-           const { data: regProf } = await supabase.from("member_registry").select("full_name").eq("email", userEmail).single();
-           if (regProf) prof.full_name = regProf.full_name;
+          if (regProf) {
+            if (!prof) prof = regProf;
+            else {
+              if (!prof.full_name) prof.full_name = regProf.full_name;
+              
+              // Merge skill profile if missing in profiles table but exists in registry
+              const hasProfSkills = prof.skill_profile && prof.skill_profile !== "[]" && prof.skill_profile.length > 0;
+              const hasRegSkills = regProf.skill_profile && regProf.skill_profile !== "[]" && regProf.skill_profile.length > 0;
+              
+              if (!hasProfSkills && hasRegSkills) {
+                prof.skill_profile = regProf.skill_profile;
+              }
+              
+              if (!prof.round2_status && regProf.round2_status) {
+                prof.round2_status = regProf.round2_status;
+              }
+            }
+          }
         }
 
         setProfile(prof);
