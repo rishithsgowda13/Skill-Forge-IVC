@@ -91,9 +91,9 @@ export default function CommunicationHub() {
           </p>
        </header>
 
-       <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+       <div className="flex flex-col lg:grid lg:grid-cols-4 gap-10">
           {/* Channel Sidebar */}
-          <div className="lg:col-span-1 space-y-8">
+          <div className="lg:col-span-1 space-y-8 order-2 lg:order-1">
              <div className="bg-white rounded-[40px] p-8 border border-[#E2E8F0] shadow-sm space-y-8">
                 <div className="space-y-4">
                    <h3 className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em]">Primary Channels</h3>
@@ -150,7 +150,7 @@ export default function CommunicationHub() {
           </div>
 
           {/* Chat Interface Area */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 order-1 lg:order-2">
              {loading ? (
                 <div className="bg-white rounded-[50px] h-[600px] border border-[#E2E8F0] flex flex-col items-center justify-center space-y-4">
                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
