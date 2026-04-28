@@ -17,7 +17,8 @@ import {
   LogOut,
   Loader2,
   Cpu,
-  Phone
+  Phone,
+  Layers
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -34,11 +35,12 @@ export default function ProfilePage() {
   // Detailed Profile State
   const [formData, setFormData] = useState({
     full_name: "",
+    usn: "",
     phone_number: "",
     college: "",
     branch: "",
     section: "",
-    skills: "",
+    semester: "",
     role: "candidate"
   });
 
@@ -89,11 +91,12 @@ export default function ProfilePage() {
             setProfile(profileData);
             setFormData({
               full_name: profileData.full_name || "",
+              usn: profileData.usn || "",
               phone_number: profileData.phone_number || "",
               college: profileData.college || "",
               branch: profileData.branch || "",
               section: profileData.section || "",
-              skills: profileData.skills || "",
+              semester: profileData.semester || "",
               role: profileData.role || "candidate"
             });
             
@@ -121,6 +124,7 @@ export default function ProfilePage() {
                id: activeUser.id,
                full_name: `can ${idPart}`,
                email: activeUser.email,
+               usn: `1SK20CS00${idPart}`,
                role: "candidate",
                college: "NEXUS Academy",
                branch: "Cyber Security",
@@ -128,7 +132,7 @@ export default function ProfilePage() {
                phone_number: "+91 99999 99999"
              };
              setProfile(fallbackProfile);
-             setFormData({ ...fallbackProfile, skills: "" });
+             setFormData({ ...fallbackProfile });
           }
         }
       } catch (err) {
@@ -149,11 +153,12 @@ export default function ProfilePage() {
         .from("profiles")
         .update({ 
           full_name: formData.full_name,
+          usn: formData.usn,
           phone_number: formData.phone_number,
           college: formData.college,
           branch: formData.branch,
           section: formData.section,
-          skills: formData.skills,
+          semester: formData.semester,
           role: formData.role
         })
         .eq("id", profile.id);
@@ -321,6 +326,15 @@ export default function ProfilePage() {
                      </div>
                      <div className="space-y-6">
                         <DetailField 
+                          icon={Cpu} 
+                          label="University Serial Number (USN)" 
+                          value={profile.usn} 
+                          isEditing={isEditing} 
+                          val={formData.usn} 
+                          onChange={(v) => setFormData({...formData, usn: v})} 
+                          placeholder="1SK20CS..."
+                        />
+                        <DetailField 
                           icon={Activity} 
                           label="Branch / Specialization" 
                           value={profile.branch} 
@@ -337,6 +351,15 @@ export default function ProfilePage() {
                           val={formData.section} 
                           onChange={(v) => setFormData({...formData, section: v})} 
                           placeholder="Section A, etc."
+                        />
+                        <DetailField 
+                          icon={Layers} 
+                          label="Current Semester" 
+                          value={profile.semester} 
+                          isEditing={isEditing} 
+                          val={formData.semester} 
+                          onChange={(v) => setFormData({...formData, semester: v})} 
+                          placeholder="6, 8, etc."
                         />
                         <DetailField 
                           icon={Calendar} 
