@@ -30,27 +30,40 @@ export default function CandidateProjectsPage() {
   const [profile, setProfile] = useState(null);
   const [updateText, setUpdateText] = useState("");
 
+  const [isMounted, setIsMounted] = useState(false);
+
   useEffect(() => {
+    setIsMounted(true);
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      let email = "";
+      
       if (user) {
-        setUserEmail(user.email);
-        fetchUserProjects(user.email);
+        email = user.email;
       } else {
-        // Fallback for mock session
         const cookies = document.cookie.split(';');
         const sessionCookie = cookies.find(c => c.trim().startsWith('mock_session='));
         if (sessionCookie) {
           const val = sessionCookie.split('=')[1];
-          const email = val.split(':')[1] || "candidate@test.com";
-          setUserEmail(email);
-          
-          // Fetch Profile
-          const { data: prof } = await supabase.from('member_registry').select('*').eq('email', email).single();
-          setProfile(prof);
-          
-          fetchUserProjects(email);
+          email = val.split(':')[1] || "candidate@test.com";
         }
+      }
+
+      if (email) {
+        setUserEmail(email);
+        
+        // Fetch Profile from both sources
+        let { data: prof } = await supabase.from('profiles').select('*').eq('email', email).single();
+        const { data: regProf } = await supabase.from('member_registry').select('*').eq('email', email).single();
+        
+        if (regProf) {
+          if (!prof) prof = regProf;
+          else if (!prof.full_name) prof.full_name = regProf.full_name;
+        }
+        
+        setProfile(prof);
+        fetchUserProjects(email);
       }
     }
     init();
