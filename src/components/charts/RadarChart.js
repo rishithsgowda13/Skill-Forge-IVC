@@ -12,6 +12,16 @@ const SECTORS = [
   "Specialized"
 ];
 
+const SKILL_CATEGORIES = {
+  "Programming": ["JavaScript", "TypeScript", "Python", "Java", "C++", "C#", "Go", "Rust", "Ruby", "PHP", "Swift", "Kotlin"],
+  "Web Tech": ["React", "Next.js", "Vue.js", "Angular", "Node.js", "Express.js", "Django", "Flask", "Spring Boot", "HTML/CSS", "Tailwind CSS", "GraphQL", "REST APIs", "WebSocket"],
+  "Data & AI": ["Machine Learning", "Deep Learning", "Natural Language Processing", "Computer Vision", "Data Analysis", "Data Engineering", "TensorFlow", "PyTorch", "Pandas", "NumPy", "Power BI", "Tableau", "SQL", "NoSQL"],
+  "Cloud & DevOps": ["AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "CI/CD", "Terraform", "Linux"],
+  "Design & Product": ["UI/UX Design", "Figma", "Adobe XD", "Product Management", "Agile/Scrum"],
+  "Soft Skills": ["Communication", "Leadership", "Problem Solving", "Critical Thinking", "Team Collaboration", "Time Management", "Public Speaking", "Negotiation", "Adaptability", "Creativity"],
+  "Specialized": ["Cybersecurity", "Blockchain", "IoT", "Embedded Systems", "Mobile Development", "Game Development", "AR/VR", "Robotics", "3D Modeling", "Digital Marketing", "SEO", "Content Writing", "Project Management", "Business Analysis", "Financial Analysis"]
+};
+
 const DOMAIN_SVG_COLORS = {
   "Programming": "#2563EB",
   "Web Tech": "#0891B2",
@@ -32,7 +42,9 @@ export default function RadarChart({ skills, size = 200, showLabels = true }) {
 
   const findDomain = (skillObj) => {
     if (skillObj.domain) return skillObj.domain;
-    // Default mapping could be here but for shared component we might need a better way
+    for (const [cat, catSkills] of Object.entries(SKILL_CATEGORIES)) {
+      if (catSkills.includes(skillObj.skill)) return cat;
+    }
     return "Specialized"; 
   };
 
