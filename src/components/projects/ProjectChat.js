@@ -53,7 +53,7 @@ export default function ProjectChat({ projectId, userEmail, userName, isMentor =
   }
 
   const handleSendMessage = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!newMessage.trim()) return;
 
     const message = {
@@ -75,6 +75,14 @@ export default function ProjectChat({ projectId, userEmail, userName, isMentor =
       alert(`Transmission Error: ${error.message}. Ensure database tables and policies are initialized.`);
     } else {
       setNewMessage("");
+      fetchMessages();
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSendMessage(e);
     }
   };
 
@@ -138,6 +146,7 @@ export default function ProjectChat({ projectId, userEmail, userName, isMentor =
         <input 
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Transmit data to team nodes..."
           className="flex-1 bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl py-3 px-6 text-[11px] font-bold text-[#0F172A] focus:outline-none focus:border-blue-600 transition-all shadow-inner"
         />

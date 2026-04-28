@@ -25,7 +25,8 @@ export default function CandidateInterviewPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        let { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
         
         let userEmail = user?.email;
         let userId = user?.id;

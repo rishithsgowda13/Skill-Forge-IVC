@@ -39,8 +39,15 @@ export default function MentorDashboard() {
         const email = val.split(':')[1] || "mentor@test.com";
         setUserEmail(email);
         
-        // Fetch Profile
-        const { data: prof } = await supabase.from('member_registry').select('*').eq('email', email).single();
+        // Fetch Profile from both sources
+        let { data: prof } = await supabase.from('profiles').select('*').eq('email', email).single();
+        const { data: regProf } = await supabase.from('member_registry').select('*').eq('email', email).single();
+        
+        if (regProf) {
+          if (!prof) prof = regProf;
+          else if (!prof.full_name) prof.full_name = regProf.full_name;
+        }
+        
         if (prof) setMentorName(prof.full_name);
         
         fetchMentorProjects(email);

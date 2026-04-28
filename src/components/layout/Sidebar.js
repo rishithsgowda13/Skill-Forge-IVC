@@ -20,7 +20,8 @@ import {
   Star,
   LayoutGrid,
   ShieldAlert,
-  MessageSquare
+  MessageSquare,
+  User
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
@@ -41,7 +42,8 @@ export default function Sidebar() {
   useEffect(() => {
     async function init() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
         if (user) {
           const { data: profile } = await supabase.from("profiles").select("full_name, role, round2_status").eq("id", user.id).single();
           if (profile) {
@@ -89,30 +91,35 @@ export default function Sidebar() {
 
   const adminItems = [
     { href: "/admin", label: "Control Center", icon: LayoutDashboard },
-    { href: "/dashboard/chat", label: "Neural Monitoring", icon: MessageSquare },
+    { href: "/dashboard/chat", label: "Messages", icon: MessageSquare },
     { href: "/admin/round2", label: "Round 2 Selection", icon: BookOpen },
     { href: "/admin/round3", label: "Round 3 Selection", icon: UserCheck },
     { href: "/admin/interview", label: "Interview Panel", icon: Star },
     { href: "/admin/profiles", label: "Member Profiles", icon: LayoutGrid },
-    { href: "/admin/projects", label: "Project Nexus", icon: Activity },
+    { href: "/admin/projects", label: "My Projects", icon: Activity },
     { href: "/admin/roles", label: "Role Nexus", icon: ShieldCheck },
     { href: "/admin/achievements", label: "Hall of Valor", icon: Trophy },
     { href: "/admin/users", label: "Node Registry", icon: Users },
+    { href: "/dashboard/members", label: "Club Members", icon: LayoutGrid },
+    { href: "/dashboard/profile", label: "My Profile", icon: User },
   ];
 
   const mentorItems = [
     { href: "/mentor", label: "Mentor Center", icon: LayoutDashboard },
-    { href: "/dashboard/chat", label: "Node Communication", icon: MessageSquare },
-    { href: "/mentor/projects", label: "Project Oversight", icon: Activity },
+    { href: "/dashboard/chat", label: "Messages", icon: MessageSquare },
+    { href: "/mentor/projects", label: "My Projects", icon: Activity },
+    { href: "/dashboard/members", label: "Club Members", icon: LayoutGrid },
+    { href: "/dashboard/profile", label: "My Profile", icon: User },
   ];
 
   const candidateItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/dashboard/chat", label: "Communication", icon: MessageSquare },
-    { href: "/dashboard/projects", label: "My Assignments", icon: Activity },
+    { href: "/dashboard/chat", label: "Messages", icon: MessageSquare },
+    { href: "/dashboard/projects", label: "My Projects", icon: Activity },
     { href: "/dashboard/achievements", label: "Achievements", icon: Trophy },
-    { href: "/dashboard/research", label: "Skill Forge", icon: BookOpen },
     { href: "/dashboard/interview", label: "Skill Profile", icon: Star },
+    { href: "/dashboard/members", label: "Club Members", icon: LayoutGrid },
+    { href: "/dashboard/profile", label: "My Profile", icon: User },
   ];
 
   const isAdmin = role === "admin" || role === "evaluator";
