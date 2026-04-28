@@ -50,8 +50,15 @@ export default function CommunicationHub() {
       return;
     }
 
-    // Fetch Profile
-    const { data: prof } = await supabase.from('member_registry').select('*').eq('email', email).single();
+    // Fetch Profile from both sources
+    let { data: prof } = await supabase.from('profiles').select('*').eq('email', email).single();
+    const { data: regProf } = await supabase.from('member_registry').select('*').eq('email', email).single();
+    
+    if (regProf) {
+      if (!prof) prof = regProf;
+      else if (!prof.full_name) prof.full_name = regProf.full_name;
+    }
+
     setProfile(prof || { email, full_name: email.split('@')[0], role: 'candidate' });
 
     // Fetch Projects
